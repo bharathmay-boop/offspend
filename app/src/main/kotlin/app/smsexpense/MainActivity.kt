@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
                     if (!granted) {
                         PermissionScreen(
                             deniedBefore = denied,
-                            onAllow = { ask.launch(arrayOf(Manifest.permission.RECEIVE_SMS)) },
+                            onAllow = { ask.launch(arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.POST_NOTIFICATIONS)) },
                             onOpenSettings = {
                                 startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
                             },

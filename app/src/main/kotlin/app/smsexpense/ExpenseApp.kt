@@ -1,6 +1,7 @@
 package app.smsexpense
 
 import android.app.Application
+import app.smsexpense.capture.TransactionNotifier
 import app.smsexpense.core.Source
 import app.smsexpense.data.AppDatabase
 import app.smsexpense.data.Ledger
@@ -21,6 +22,13 @@ class ExpenseApp : Application() {
     }
 
     /** Every captured message goes through here. Returns the saved transaction's id, or null. */
-    suspend fun onMessage(source: Source, sender: String, body: String, receivedAt: Long): Long? =
-        ledger.record(source, sender, body, receivedAt)
+    suspend fun onMessage(source: Source, sender: String, body: String, receivedAt: Long, notify: Boolean = true): Long? {
+        val id = ledger.record(source, sender, body, receivedAt) ?: return null
+        if (notify) {
+            val tx = db.transactions().byId(id) ?: return id
+            val category = tx.categoryId?.let { cid -> db.categories().all().firstOrNull { it.id == cid } }
+            TransactionNotifier.show(this, tx, category)
+        }
+        return id
+    }
 }
