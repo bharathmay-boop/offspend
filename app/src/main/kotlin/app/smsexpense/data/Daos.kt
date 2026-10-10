@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -17,6 +18,12 @@ interface TransactionDao {
 
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun byId(id: Long): TransactionEntity?
+
+    @Query("UPDATE transactions SET categoryId = :categoryId, confirmed = 1 WHERE id = :id")
+    suspend fun setCategory(id: Long, categoryId: Long)
+
+    @Query("UPDATE transactions SET note = :note WHERE id = :id")
+    suspend fun setNote(id: Long, note: String?)
 }
 
 @Dao
@@ -24,6 +31,24 @@ interface CategoryDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(category: CategoryEntity): Long
 
-    @Query("SELECT * FROM categories ORDER BY name")
+    @Query("SELECT * FROM categories ORDER BY slot")
     fun observeAll(): Flow<List<CategoryEntity>>
+
+    @Query("SELECT * FROM categories ORDER BY slot")
+    suspend fun all(): List<CategoryEntity>
+
+    @Query("SELECT * FROM categories WHERE name = :name COLLATE NOCASE")
+    suspend fun byName(name: String): CategoryEntity?
+
+    @Query("SELECT COALESCE(MAX(slot), -1) + 1 FROM categories")
+    suspend fun nextSlot(): Int
+}
+
+@Dao
+interface MerchantRuleDao {
+    @Upsert
+    suspend fun upsert(rule: MerchantRuleEntity)
+
+    @Query("SELECT * FROM merchant_rules")
+    suspend fun all(): List<MerchantRuleEntity>
 }
