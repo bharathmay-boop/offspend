@@ -1,6 +1,7 @@
 package app.smsexpense
 
 import android.app.Application
+import app.smsexpense.capture.InboxImporter
 import app.smsexpense.capture.TransactionNotifier
 import app.smsexpense.core.Source
 import app.smsexpense.data.AppDatabase
@@ -8,6 +9,8 @@ import app.smsexpense.data.Ledger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class ExpenseApp : Application() {
@@ -15,6 +18,31 @@ class ExpenseApp : Application() {
     val db: AppDatabase by lazy { AppDatabase.create(this) }
     val ledger: Ledger by lazy { Ledger(db) }
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    sealed interface History {
+        data object NotStarted : History
+        data object Reading : History
+        data class Done(val found: Int) : History
+    }
+
+    private val _history = MutableStateFlow<History>(History.NotStarted)
+    val history: StateFlow<History> = _history
+
+    private val prefs by lazy { getSharedPreferences("capture", MODE_PRIVATE) }
+
+    /** On first setup, files the last 90 days of bank messages so the first screen already has history. */
+    fun importHistoryOnce() {
+        if (prefs.getBoolean(KEY_HISTORY_DONE, false) || _history.value == History.Reading) return
+        _history.value = History.Reading
+        scope.launch {
+            val since = System.currentTimeMillis() - InboxImporter.HISTORY_DAYS * 24 * 60 * 60 * 1000
+            val found = InboxImporter(InboxImporter.systemInbox(this@ExpenseApp)) { s, from, body, at ->
+                onMessage(s, from, body, at, notify = false)
+            }.importSince(since)
+            prefs.edit().putBoolean(KEY_HISTORY_DONE, true).apply()
+            _history.value = History.Done(found)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -30,5 +58,9 @@ class ExpenseApp : Application() {
             TransactionNotifier.show(this, tx, category)
         }
         return id
+    }
+
+    private companion object {
+        const val KEY_HISTORY_DONE = "history_done"
     }
 }

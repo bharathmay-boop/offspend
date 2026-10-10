@@ -35,6 +35,7 @@ fun PermissionScreen(deniedBefore: Boolean, onAllow: () -> Unit, onOpenSettings:
             style = MaterialTheme.typography.bodyLarge,
         )
         Bullet("It only keeps messages about money: payments, refunds and salary.")
+        Bullet("On setup it also files your last 3 months, so you start with real history.")
         Bullet("OTPs, offers and personal messages are skipped and never stored.")
         Bullet("Everything stays on this phone. The app has no account and uploads nothing.")
         PrivacyNote()

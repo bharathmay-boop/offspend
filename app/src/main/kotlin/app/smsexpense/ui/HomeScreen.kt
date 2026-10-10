@@ -51,6 +51,7 @@ fun HomeScreen(
     summaries: List<CurrencyMonth>,
     transactions: List<TransactionEntity>,
     categories: Map<Long, CategoryEntity>,
+    banner: String?,
     onPreviousMonth: () -> Unit,
     onNextMonth: (() -> Unit)?,
     onOpen: (TransactionEntity) -> Unit,
@@ -66,6 +67,17 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f).padding(horizontal = Spacing.s),
                 )
                 TextButton(onClick = { onNextMonth?.invoke() }, enabled = onNextMonth != null) { Text("Next ›") }
+            }
+        }
+        if (banner != null) {
+            item {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.l, vertical = Spacing.s),
+                ) {
+                    Text(banner, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(Spacing.l))
+                }
             }
         }
         if (summaries.isEmpty()) {
