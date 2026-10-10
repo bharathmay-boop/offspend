@@ -28,10 +28,17 @@ import app.smsexpense.core.MonthlySummary
 import app.smsexpense.ui.HomeScreen
 import app.smsexpense.ui.PermissionScreen
 import app.smsexpense.ui.theme.ExpenseTheme
+import kotlinx.coroutines.launch
 import java.time.YearMonth
 import java.time.ZoneId
 
 class MainActivity : ComponentActivity() {
+    override fun onStart() {
+        super.onStart()
+        val app = application as ExpenseApp
+        if (canReadInbox(app)) app.scope.launch { app.catchUp() }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
