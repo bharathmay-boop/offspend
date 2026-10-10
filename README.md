@@ -34,3 +34,6 @@ adb emu sms send AD-HDFCBK "Sent Rs.320.00 From HDFC Bank A/C *1234 To CALIFORNI
 ## Privacy
 
 Spending data stays on the device. Any product stats are opt-in and contain no amounts, merchants or message text.
+
+## Design
+Every screen follows the design system in [DESIGN.md](DESIGN.md).
