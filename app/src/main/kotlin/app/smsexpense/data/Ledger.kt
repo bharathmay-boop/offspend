@@ -69,6 +69,13 @@ class Ledger(private val db: AppDatabase) {
         tx.merchant?.let { db.merchantRules().upsert(MerchantRuleEntity(Categorizer.merchantKey(it), categoryId)) }
     }
 
+    /** Saves what the person chose on the category sheet. A typed new category is created and used. */
+    suspend fun file(transactionId: Long, categoryId: Long?, newCategoryName: String?, note: String?) {
+        val chosen = newCategoryName?.takeIf { it.isNotBlank() }?.let { categoryNamed(it).id } ?: categoryId
+        chosen?.let { setCategory(transactionId, it) }
+        setNote(transactionId, note)
+    }
+
     suspend fun setNote(transactionId: Long, note: String?) =
         db.transactions().setNote(transactionId, note?.trim()?.takeIf { it.isNotEmpty() })
 }

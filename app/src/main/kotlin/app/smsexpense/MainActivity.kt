@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -96,6 +97,7 @@ private fun RecentTransactions(app: ExpenseApp) {
                     amount = tx.amount,
                     currency = tx.currency,
                     direction = tx.direction,
+                    modifier = Modifier.clickable { app.startActivity(CategorySheetActivity.intent(app, tx.id)) },
                 )
             }
         }

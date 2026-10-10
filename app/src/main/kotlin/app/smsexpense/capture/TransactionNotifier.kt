@@ -11,7 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
-import app.smsexpense.MainActivity
+import app.smsexpense.CategorySheetActivity
 import app.smsexpense.R
 import app.smsexpense.core.Direction
 import app.smsexpense.data.CategoryEntity
@@ -34,11 +34,11 @@ object TransactionNotifier {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    /** Opens the category sheet for this transaction. Replaced by the sheet itself in #8. */
+    /** Opens the category sheet for this transaction. */
     fun openIntent(context: Context, txId: Long): PendingIntent =
         PendingIntent.getActivity(
             context, txId.toInt(),
-            Intent(context, MainActivity::class.java).putExtra(EXTRA_TX, txId),
+            CategorySheetActivity.intent(context, txId),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 

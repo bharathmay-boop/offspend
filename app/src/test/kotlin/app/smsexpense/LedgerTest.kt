@@ -67,6 +67,15 @@ class LedgerTest {
         assertEquals(12, a.slot)
     }
 
+    @Test fun fileCreatesATypedCategoryUsesItAndSavesTheNote() = runTest {
+        val id = save("PETCO", "four")
+        ledger.file(id, categoryId = null, newCategoryName = "Pets", note = "Dog food")
+        val tx = db.transactions().byId(id)!!
+        assertEquals("Pets", db.categories().all().first { it.id == tx.categoryId }.name)
+        assertEquals("Dog food", tx.note)
+        assertEquals("Pets", ledger.guessCategory("PETCO", Direction.DEBIT)?.name)
+    }
+
     @Test fun blankNotesAreStoredAsNoNote() = runTest {
         val id = save("ZEPTO", "three")
         ledger.setNote(id, "   ")
