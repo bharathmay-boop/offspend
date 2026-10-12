@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -52,6 +53,8 @@ fun HomeScreen(
     transactions: List<TransactionEntity>,
     categories: Map<Long, CategoryEntity>,
     banner: String?,
+    /** Shown until payment app notifications are turned on or the offer is dismissed. */
+    appNotificationsOffer: AppNotificationsOffer?,
     onPreviousMonth: () -> Unit,
     onNextMonth: (() -> Unit)?,
     onOpen: (TransactionEntity) -> Unit,
@@ -80,6 +83,7 @@ fun HomeScreen(
                 }
             }
         }
+        if (appNotificationsOffer != null) item { AppNotificationsCard(appNotificationsOffer) }
         if (summaries.isEmpty()) {
             item {
                 Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
@@ -161,6 +165,32 @@ private fun CategoryBar(name: String, slot: Int, share: Float, amount: String) {
         }
         Box(Modifier.fillMaxWidth().height(6.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)) {
             Box(Modifier.fillMaxWidth(width).fillMaxHeight().background(categoryColor(slot), CircleShape))
+        }
+    }
+}
+
+class AppNotificationsOffer(val onTurnOn: () -> Unit, val onNotNow: () -> Unit)
+
+@Composable
+private fun AppNotificationsCard(offer: AppNotificationsOffer) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.l, vertical = Spacing.s),
+    ) {
+        Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            Text("Catch UPI app payments too", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Some payments, like small UPI ones, don't come with a bank SMS. With notification access, the app " +
+                    "also reads payment notifications from Google Pay, PhonePe, Paytm and bank apps. Notifications " +
+                    "from every other app are ignored, and nothing leaves this phone.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                androidx.compose.material3.Button(onClick = offer.onTurnOn, modifier = Modifier.heightIn(min = 48.dp)) { Text("Turn on") }
+                TextButton(onClick = offer.onNotNow, modifier = Modifier.heightIn(min = 48.dp)) { Text("Not now") }
+            }
         }
     }
 }
