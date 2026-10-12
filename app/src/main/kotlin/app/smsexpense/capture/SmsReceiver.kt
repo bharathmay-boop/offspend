@@ -19,13 +19,13 @@ class SmsReceiver : BroadcastReceiver() {
         if (parts.isEmpty()) return
         // A long SMS arrives in parts; join them back into one message per sender.
         val messages = parts.groupBy { it.originatingAddress.orEmpty() }
-            .map { (sender, pieces) -> Triple(sender, pieces.joinToString("") { it.messageBody.orEmpty() }, pieces.first().timestampMillis) }
+            .map { (sender, pieces) -> InboxMessage(sender, pieces.joinToString("") { it.messageBody.orEmpty() }, pieces.first().timestampMillis) }
 
         val app = context.applicationContext as ExpenseApp
         val pending = goAsync()
         app.scope.launch {
             try {
-                for ((sender, body, receivedAt) in messages) app.onMessage(Source.SMS, sender, body, receivedAt)
+                app.onMessages(Source.SMS, messages)
             } finally {
                 pending.finish()
             }

@@ -104,6 +104,7 @@ private fun Home(app: ExpenseApp) {
         banner = when (val h = history) {
             ExpenseApp.History.Reading -> "Reading your last 3 months of bank messages…"
             is ExpenseApp.History.Done -> if (h.found > 0) "Filed ${h.found} payments from the last 3 months." else null
+            ExpenseApp.History.Failed -> "Couldn't read past messages this time. The app will try again next time it opens."
             ExpenseApp.History.NotStarted -> null
         },
         appNotificationsOffer = if (listenerOn || offerDismissed) null else AppNotificationsOffer(
