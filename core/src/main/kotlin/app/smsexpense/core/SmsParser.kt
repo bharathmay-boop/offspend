@@ -28,7 +28,7 @@ object SmsParser {
 
     private const val NUMBER = """(\d{1,3}(?:,\d{2,3})+|\d+)(?:\.(\d{1,2}))?"""
     private val currencyToken = """(Rs\.?|INR|₹|USD|US\$|\$|AED|GBP|£|EUR|€|PKR|NGN|Ksh|KES)"""
-    private val moneyWithCurrency = r("""$currencyToken\s?$NUMBER""")
+    private val moneyWithCurrency = r("""(?<![A-Za-z])$currencyToken\s?$NUMBER""")
     private val bareAmountAfterVerb = r("""\b(?:debited|credited) by\s+$NUMBER""")
     private val notTheAmount = r("""(bal|balance|limit|lmt|due)[^\d]{0,12}$""")
 

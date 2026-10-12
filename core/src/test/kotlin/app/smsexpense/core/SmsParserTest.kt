@@ -34,4 +34,12 @@ class SmsParserTest {
     @Test fun messageWithAVerbButNoAmountIsNotUnderstood() {
         assertEquals(SmsReading.NotUnderstood, SmsParser.parse(Source.SMS, "VM-HDFCBK", "Your account was debited. -HDFC Bank"))
     }
+
+    @Test fun aCurrencyLetterTokenInsideAWordIsNotTheAmount() {
+        for (word in listOf("hrs", "Mrs", "yrs")) {
+            val got = SmsParser.parse(Source.SMS, "AD-HDFCBK", "Dear Customer, 4 $word 30 min ago Rs 250 was debited from a/c XX1234 at AMAZON")
+                as SmsReading.Transaction
+            assertEquals(word, 0, BigDecimal(250).compareTo(got.money.amount))
+        }
+    }
 }
