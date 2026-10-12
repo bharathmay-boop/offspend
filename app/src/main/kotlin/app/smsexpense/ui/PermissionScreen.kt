@@ -2,6 +2,7 @@ package app.smsexpense.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.smsexpense.ui.components.PrivacyNote
 import app.smsexpense.ui.theme.Spacing
@@ -54,7 +56,11 @@ fun PermissionScreen(deniedBefore: Boolean, onAllow: () -> Unit, onOpenSettings:
     }
 }
 
+/** A point with a hanging indent: wrapped lines start under the text, not under the bullet. */
 @Composable
-private fun Bullet(text: String) {
-    Text("•  $text", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+internal fun Bullet(text: String) {
+    Row(Modifier.semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        Text("•", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+    }
 }
