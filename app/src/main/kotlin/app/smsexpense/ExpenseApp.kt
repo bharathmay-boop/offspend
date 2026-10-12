@@ -3,6 +3,7 @@ package app.smsexpense
 import android.app.Application
 import app.smsexpense.capture.InboxImporter
 import app.smsexpense.capture.InboxMessage
+import app.smsexpense.capture.OnDeviceModel
 import app.smsexpense.capture.TransactionNotifier
 import app.smsexpense.core.Source
 import app.smsexpense.data.AppDatabase
@@ -17,7 +18,7 @@ import kotlinx.coroutines.launch
 class ExpenseApp : Application() {
     // ponytail: one database and ledger on the Application, add DI if the graph grows
     val db: AppDatabase by lazy { AppDatabase.create(this) }
-    val ledger: Ledger by lazy { Ledger(db) }
+    val ledger: Ledger by lazy { Ledger(db, model = OnDeviceModel::read) }
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     sealed interface History {

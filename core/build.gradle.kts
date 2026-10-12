@@ -7,6 +7,6 @@ plugins {
 kotlin { jvmToolchain(21) }
 
 dependencies {
+    implementation(libs.serialization.json)
     testImplementation(libs.junit)
-    testImplementation(libs.serialization.json)
 }
