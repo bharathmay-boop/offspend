@@ -40,6 +40,16 @@ class CatchUpTest {
         assertEquals(1, app.db.transactions().observeAll().first().size)
     }
 
+    @Test fun aLivePaymentIsNotFiledAgainWhenTheInboxStampsItWithALaterReceivedTime() = runTest {
+        // Live, the receiver sees the message centre time. In the inbox the same SMS has a
+        // received time a few seconds later, and the message centre time in sentAt.
+        val body = payment("BLINKIT", 0).body
+        app.onMessage(Source.SMS, "AD-HDFCBK", body, 2_000_000L)
+        inbox += InboxMessage("AD-HDFCBK", body, receivedAt = 2_004_000L, sentAt = 2_000_000L)
+        assertEquals(0, app.catchUp(reader))
+        assertEquals(1, app.db.transactions().observeAll().first().size)
+    }
+
     @Test fun eachCatchUpOnlyLooksAfterTheLastMessageSeen() = runTest {
         inbox += payment("ZEPTO", 2_000_000L)
         app.catchUp(reader)
