@@ -185,12 +185,12 @@ fun MonthCard(s: CurrencyMonth, slotOf: Map<String, Int>) {
             if (!expanded) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     g.shown.forEach { c ->
-                        CategoryPill(c.category ?: "Needs a category", formatMoney(c.amount, s.currency), onClick = { expanded = true }) {
+                        CategoryPill(c.category ?: "Needs a category", formatMoney(c.amount, s.currency, whole = true), onClick = { expanded = true }) {
                             CategoryIcon(c.category, slot(c), size = CategoryIconSize.small)
                         }
                     }
                     if (g.other.signum() > 0) {
-                        CategoryPill("Other", formatMoney(g.other, s.currency), onClick = { expanded = true }, showName = true) {}
+                        CategoryPill("Other", formatMoney(g.other, s.currency, whole = true), onClick = { expanded = true }, showName = true) {}
                     }
                 }
             }
@@ -216,7 +216,8 @@ private fun SpendingBar(totals: List<CategoryTotal>, slot: (CategoryTotal) -> In
     LaunchedEffect(Unit) { grow.animateTo(1f, Motion.default()) }
     val sum = totals.fold(BigDecimal.ZERO) { a, t -> a + t.amount }.toFloat().coerceAtLeast(1f)
     Box(
-        Modifier.fillMaxWidth().minimumInteractiveComponentSize()
+        // ponytail: the bar is a small tap target; the pills below do the same thing at full size for touch and TalkBack.
+        Modifier.fillMaxWidth().padding(vertical = Spacing.xs)
             .clickable(onClickLabel = if (expanded) "Show fewer categories" else "Show all categories", onClick = onToggle),
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -226,7 +227,7 @@ private fun SpendingBar(totals: List<CategoryTotal>, slot: (CategoryTotal) -> In
         ) {
             totals.forEach { t ->
                 val w = t.amount.toFloat() / sum
-                if (w > 0f) Box(Modifier.weight(w).fillMaxHeight().background(categoryColor(slot(t))))
+                if (w > 0f) Box(Modifier.weight(w).fillMaxHeight().background(if (t.category == null) MaterialTheme.colorScheme.tertiary else categoryColor(slot(t))))
             }
         }
     }
@@ -284,7 +285,7 @@ private fun CategoryBar(category: String?, slot: Int, share: Float, amount: Stri
             Text(amount, style = AppTheme.type.amountRow)
         }
         Box(Modifier.fillMaxWidth().height(6.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)) {
-            Box(Modifier.fillMaxWidth(width).fillMaxHeight().background(categoryColor(slot), CircleShape))
+            Box(Modifier.fillMaxWidth(width).fillMaxHeight().background(if (category == null) MaterialTheme.colorScheme.tertiary else categoryColor(slot), CircleShape))
         }
     }
 }

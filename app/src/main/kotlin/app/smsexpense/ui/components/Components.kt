@@ -47,10 +47,11 @@ import java.time.format.DateTimeFormatter
 import java.util.Currency
 import java.util.Locale
 
-/** Formats an amount in its own currency, e.g. ₹1,25,000.00 or AED 45.50. */
-fun formatMoney(amount: BigDecimal, currency: String, locale: Locale = Locale.getDefault()): String {
+/** Formats an amount in its own currency, e.g. ₹1,25,000.00 or AED 45.50. [whole] drops ".00" from a round amount, for glanceable totals. */
+fun formatMoney(amount: BigDecimal, currency: String, locale: Locale = Locale.getDefault(), whole: Boolean = false): String {
     val f = NumberFormat.getCurrencyInstance(if (currency == "INR") Locale.forLanguageTag("en-IN") else locale)
     f.currency = Currency.getInstance(currency)
+    if (whole && amount.stripTrailingZeros().scale() <= 0) f.maximumFractionDigits = 0
     return f.format(amount)
 }
 
