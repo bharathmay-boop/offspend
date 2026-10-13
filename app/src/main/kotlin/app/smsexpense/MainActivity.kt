@@ -87,6 +87,7 @@ private fun Home(app: ExpenseApp) {
     LaunchedEffect(Unit) { if (canReadInbox(app)) app.importHistoryOnce() }
     val prefs = remember { app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE) }
     var listenerOn by remember { mutableStateOf(PaymentNotificationListener.isEnabled(app)) }
+    var importNoticeShown by remember { mutableStateOf(prefs.getBoolean("import_notice_shown", false)) }
     var offerDismissed by remember { mutableStateOf(prefs.getBoolean("app_notifications_offer_dismissed", false)) }
     // Coming back from Settings is a resume, so check again then.
     LifecycleResumeEffect(Unit) {
@@ -105,11 +106,18 @@ private fun Home(app: ExpenseApp) {
         summaries = MonthlySummary.of(entries, month, zone),
         transactions = transactions.filter { MonthlySummary.monthOf(it.occurredAt, zone) == month },
         categories = byId,
-        banner = when (val h = history) {
-            ExpenseApp.History.Reading -> "Reading your last 3 months of bank messages…"
-            is ExpenseApp.History.Done -> if (h.found > 0) "Filed ${h.found} payments from the last 3 months." else null
+        importing = history == ExpenseApp.History.Reading,
+        notice = when (val h = history) {
+            // Said once, then gone: it is news the first time and clutter after that.
+            is ExpenseApp.History.Done -> if (h.found > 0 && !importNoticeShown) "Filed ${h.found} payments from the last 3 months." else null
             ExpenseApp.History.Failed -> "Couldn't read past messages this time. The app will try again next time it opens."
-            ExpenseApp.History.NotStarted -> null
+            else -> null
+        },
+        onNoticeShown = {
+            if (history is ExpenseApp.History.Done) {
+                prefs.edit().putBoolean("import_notice_shown", true).apply()
+                importNoticeShown = true
+            }
         },
         appNotificationsOffer = if (listenerOn || offerDismissed) null else AppNotificationsOffer(
             onTurnOn = {

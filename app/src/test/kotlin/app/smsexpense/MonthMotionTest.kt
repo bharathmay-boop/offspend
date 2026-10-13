@@ -36,7 +36,7 @@ class MonthMotionTest {
         ExpenseTheme {
             HomeScreen(
                 month = month, summaries = emptyList(), transactions = emptyList(), categories = emptyMap(),
-                banner = null, appNotificationsOffer = null,
+                importing = false, notice = null, onNoticeShown = {}, appNotificationsOffer = null,
                 onPreviousMonth = { month = month.minusMonths(1) },
                 onNextMonth = if (month < current) ({ month = month.plusMonths(1) }) else null,
                 onOpen = {},

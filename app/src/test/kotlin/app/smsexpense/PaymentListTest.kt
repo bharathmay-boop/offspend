@@ -54,7 +54,7 @@ class PaymentListTest {
                 HomeScreen(
                     month = YearMonth.of(2026, 10), summaries = emptyList(),
                     transactions = listOf(at(today, 1, "SWIGGY"), at(today, 2, "ZOMATO"), at(today.minusDays(1), 3, "UBER")),
-                    categories = emptyMap(), banner = null, appNotificationsOffer = null,
+                    categories = emptyMap(), importing = false, notice = null, onNoticeShown = {}, appNotificationsOffer = null,
                     onPreviousMonth = {}, onNextMonth = null, onOpen = {}, today = today,
                 )
             }
