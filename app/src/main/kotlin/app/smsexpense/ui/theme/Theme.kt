@@ -1,5 +1,6 @@
 package app.smsexpense.ui.theme
 
+import android.provider.Settings
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.spring
@@ -10,8 +11,10 @@ import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 internal val AppShapes = Shapes(
@@ -24,6 +27,7 @@ internal val AppShapes = Shapes(
 
 /** The 4dp grid from DESIGN.md. */
 object Spacing {
+    val xxs = 2.dp
     val xs = 4.dp
     val s = 8.dp
     val m = 12.dp
@@ -39,8 +43,18 @@ object Motion {
     fun <T> default(): SpringSpec<T> = spring(dampingRatio = 0.9f, stiffness = 700f)
     fun <T> effects(): SpringSpec<T> = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 1600f)
 
+    /** A number counting to a new value (the month total): settles in about half a second, no overshoot. */
+    fun <T> count(): SpringSpec<T> = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 120f)
+
     /** How long a confirmation (the check on a picked category) stays on screen before the sheet closes. */
     const val CONFIRM_HOLD_MS = 350L
+}
+
+/** True when the person turned animations off (Settings, Accessibility, "Remove animations"). Animations then jump to their end. */
+@Composable
+fun reducedMotion(): Boolean {
+    val context = LocalContext.current
+    return remember { Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
 }
 
 /** Haptic feedback by meaning, not by effect. Through LocalHapticFeedback, so the system haptics setting is respected. */

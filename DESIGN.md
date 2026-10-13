@@ -88,6 +88,12 @@ Spring based, from the Material 3 Expressive motion scheme. Use `Motion.fast` fo
 
 A confirmation stays on screen for `Motion.CONFIRM_HOLD_MS` (350ms) before what it confirms closes: picking a category on the sheet shows a check mark in the chip, then the sheet files and slides away.
 
+The month total counts from its last value to the new one with `Motion.count()` instead of jumping, so a change gets noticed. The spending bar grows in from the left the first time it shows. Check `reducedMotion()` for anything that would otherwise animate on its own: when animations are off, show the end state at once.
+
+## The month card
+
+One glance, not a table. The total is the largest thing on the screen. Under it, one bar split by category in each category's color shows the shape of the month. Under that, the top 4 categories as pills (icon and amount); the rest are added up as "Other", unless only one would be left over. Tapping the bar or a pill shows every category with its own bar, and "Show less" folds it back.
+
 ## Haptics
 
 Haptics say what happened, never decorate. Use the tokens in `Haptics` through `LocalHapticFeedback`, which follows the system haptics setting and needs no permission.
