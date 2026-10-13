@@ -42,6 +42,8 @@ import app.smsexpense.ui.theme.Motion
 import app.smsexpense.ui.theme.Spacing
 import java.math.BigDecimal
 import java.text.NumberFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Currency
 import java.util.Locale
 
@@ -172,19 +174,19 @@ fun CategoryChip(
     )
 }
 
+/** A payment in the list: what it is at a glance (icon), who, which category, how much. The day is in the header above. */
 @Composable
 fun TransactionRow(
     merchant: String,
     category: String?,
     categorySlot: Int,
-    date: String,
     amount: BigDecimal,
     currency: String,
     direction: Direction,
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = Spacing.l, vertical = Spacing.m),
+        modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = Spacing.l, vertical = Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
@@ -192,7 +194,7 @@ fun TransactionRow(
         Column(Modifier.weight(1f)) {
             Text(merchant, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(category ?: "Needs a category", date).joinToString(" · "),
+                category ?: "Needs a category",
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (category == null) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -200,6 +202,34 @@ fun TransactionRow(
         AmountText(amount, currency, direction)
     }
 }
+
+/** "Today", "Yesterday", then "Tue, 6 Oct". */
+fun dayLabel(day: LocalDate, today: LocalDate, locale: Locale = Locale.getDefault()): String = when (day) {
+    today -> "Today"
+    today.minusDays(1) -> "Yesterday"
+    else -> day.format(DateTimeFormatter.ofPattern("EEE, d MMM", locale))
+}
+
+/**
+ * Banks write payees in capitals (SWIGGY, BLUE TOKAI). Shown as people write them: Swiggy, Blue Tokai.
+ * Short forms stay in capitals (KFC, IRCTC). A name that is already mixed case, or has no spaces and odd characters
+ * like a UPI id, is left as it is. Only for display; the stored name never changes.
+ */
+fun displayMerchant(raw: String): String {
+    if (raw.any { it.isLowerCase() }) return raw
+    return raw.split(' ').joinToString(" ") { word ->
+        when {
+            word.isEmpty() -> word
+            word in SHORT_FORMS -> word
+            word.length <= 3 && word !in SMALL_WORDS && word.all { it.isLetter() } -> word
+            !word.all { it.isLetter() || it == '\'' || it == '&' || it == '-' } -> word
+            else -> word.lowercase().replaceFirstChar { it.titlecase(Locale.ROOT) }
+        }
+    }
+}
+
+private val SHORT_FORMS = setOf("IRCTC", "HDFC", "ICICI", "BSNL", "IOCL", "BPCL", "HPCL", "NEFT", "IMPS", "RTGS", "UPI", "EMI", "ATM")
+private val SMALL_WORDS = setOf("THE", "AND", "OF", "FOR", "TO", "BY", "AT", "IN", "ON", "PAY", "BAR", "CAB", "BUS", "CAR", "TEA", "ONE", "NEW", "BIG", "MY")
 
 @Composable
 fun PrivacyNote(modifier: Modifier = Modifier) {

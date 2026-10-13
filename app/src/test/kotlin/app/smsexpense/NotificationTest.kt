@@ -34,7 +34,7 @@ class NotificationTest {
     @Test fun aNewPaymentShowsTheAmountGuessAndOneTapActions() = runTest {
         app.onMessage(Source.SMS, "AD-HDFCBK", payment, 1_000L)
         val n = notifications.single()
-        assertEquals("−₹320.00 · CALIFORNIA BURRITO", n.extras.getString("android.title"))
+        assertEquals("−₹320.00 · California Burrito", n.extras.getString("android.title"))
         assertEquals("Filed under Food. Looks right?", n.extras.getString("android.text"))
         assertEquals(listOf("Looks right", "Change", "Add note"), n.actions.map { it.title.toString() })
     }

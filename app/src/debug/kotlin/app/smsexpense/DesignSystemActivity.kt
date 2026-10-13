@@ -114,9 +114,9 @@ private fun DesignSystemScreen(dark: Boolean, onDark: (Boolean) -> Unit) {
             AmountText(BigDecimal("45.50"), "AED", Direction.DEBIT)
             Surface(color = scheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
                 Column {
-                    TransactionRow("California Burrito", "Food", 0, "8 Oct", BigDecimal("320"), "INR", Direction.DEBIT)
-                    TransactionRow("ACME TECHNOLOGIES PVT LTD", "Salary", 5, "1 Oct", BigDecimal("125000"), "INR", Direction.CREDIT)
-                    TransactionRow("PNB ··3210", null, 99, "6 Oct", BigDecimal("400"), "INR", Direction.DEBIT)
+                    TransactionRow("California Burrito", "Food", 0, BigDecimal("320"), "INR", Direction.DEBIT)
+                    TransactionRow("ACME TECHNOLOGIES PVT LTD", "Salary", 5, BigDecimal("125000"), "INR", Direction.CREDIT)
+                    TransactionRow("PNB ··3210", null, 99, BigDecimal("400"), "INR", Direction.DEBIT)
                 }
             }
             PrivacyNote()
