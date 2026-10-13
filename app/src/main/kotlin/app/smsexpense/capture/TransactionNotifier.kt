@@ -27,6 +27,8 @@ object TransactionNotifier {
     const val EXTRA_TX = "transaction_id"
     const val EXTRA_CATEGORY = "category_id"
     const val KEY_NOTE = "note"
+    const val GROUP = "payments"
+    private const val SUMMARY_ID = Int.MAX_VALUE
 
     fun ensureChannel(context: Context) {
         val channel = NotificationChannel(CHANNEL, "New payments", NotificationManager.IMPORTANCE_HIGH).apply {
@@ -67,6 +69,9 @@ object TransactionNotifier {
             .setContentIntent(openIntent(context, tx.id))
             .setAutoCancel(true)
             .setOnlyAlertOnce(true)
+            // Our own group: otherwise Android 16 groups loose notifications itself and silences them all (#71).
+            .setGroup(GROUP)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
 
         if (category != null) {
             builder.addAction(0, "Looks right", broadcast(context, ACTION_CONFIRM, tx.id) { putExtra(EXTRA_CATEGORY, category.id) })
@@ -81,9 +86,37 @@ object TransactionNotifier {
         )
 
         NotificationManagerCompat.from(context).notify(tx.id.toInt(), builder.build())
+        updateSummary(context)
     }
 
-    fun dismiss(context: Context, txId: Long) = NotificationManagerCompat.from(context).cancel(txId.toInt())
+    fun dismiss(context: Context, txId: Long) {
+        NotificationManagerCompat.from(context).cancel(txId.toInt())
+        updateSummary(context)
+    }
+
+    /**
+     * With two or more payments waiting, a silent summary holds the group together, so each new payment still pops up
+     * on its own. With fewer, there is nothing to group and the summary goes.
+     */
+    private fun updateSummary(context: Context) {
+        val manager = NotificationManagerCompat.from(context)
+        val waiting = context.getSystemService(NotificationManager::class.java).activeNotifications
+            .count { it.notification.group == GROUP && it.id != SUMMARY_ID }
+        if (waiting < 2) {
+            manager.cancel(SUMMARY_ID)
+            return
+        }
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+        val summary = NotificationCompat.Builder(context, CHANNEL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("$waiting payments to file")
+            .setGroup(GROUP)
+            .setGroupSummary(true)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .setAutoCancel(true)
+            .build()
+        manager.notify(SUMMARY_ID, summary)
+    }
 
     private fun broadcast(
         context: Context, action: String, txId: Long, mutable: Boolean = false, extras: Intent.() -> Unit = {},

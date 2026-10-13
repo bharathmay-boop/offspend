@@ -1,6 +1,7 @@
 package app.smsexpense
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationManager
 import android.content.Intent
 import android.os.Bundle
@@ -87,5 +88,27 @@ class NotificationTest {
         assertEquals("Team lunch", app.db.transactions().byId(id)!!.note)
         // The re-posted notification shows the note, so the person can see it was saved (#48).
         assertEquals("Note: Team lunch. Filed under Food. Looks right?", notifications.single().extras.getString("android.text"))
+    }
+
+    // Android 16 groups an app's loose notifications from the second one on and marks them all silent (#71).
+    // Our own group, with a summary that leaves alerting to each payment, keeps every new payment popping up.
+    @Test fun eachPaymentStillPopsUpWhenSeveralAreWaiting() = runTest {
+        app.onMessage(Source.SMS, "AD-HDFCBK", payment, 10_000L)
+        app.onMessage(Source.SMS, "AD-HDFCBK", payment.replace("320.00", "450.00"), 20_000L)
+        val (summary, payments) = notifications.partition { it.flags and Notification.FLAG_GROUP_SUMMARY != 0 }
+        assertEquals(2, payments.size)
+        assertEquals(1, summary.size)
+        (payments + summary).forEach {
+            assertEquals(TransactionNotifier.GROUP, it.group)
+            assertEquals(Notification.GROUP_ALERT_CHILDREN, it.groupAlertBehavior)
+        }
+    }
+
+    @Test fun theSummaryGoesWithTheLastPayment() = runTest {
+        val a = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 30_000L)!!
+        val b = app.onMessage(Source.SMS, "AD-HDFCBK", payment.replace("320.00", "450.00"), 40_000L)!!
+        TransactionNotifier.dismiss(app, a)
+        TransactionNotifier.dismiss(app, b)
+        assertTrue(notifications.isEmpty())
     }
 }
