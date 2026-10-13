@@ -32,6 +32,14 @@ interface TransactionDao {
     @Query("UPDATE transactions SET merchant = :merchant WHERE id = :id AND merchant IS NULL")
     suspend fun fillMerchant(id: Long, merchant: String)
 
+    /** Payees seen before, most recent first, for suggestions when adding by hand. */
+    @Query("SELECT merchant FROM transactions WHERE merchant IS NOT NULL GROUP BY merchant ORDER BY MAX(occurredAt) DESC LIMIT 200")
+    suspend fun recentPayees(): List<String>
+
+    /** Currencies of payments since a time, newest first, to pick the default for adding by hand. */
+    @Query("SELECT currency FROM transactions WHERE occurredAt >= :since ORDER BY occurredAt DESC")
+    suspend fun currenciesSince(since: Long): List<String>
+
     @Query("UPDATE transactions SET note = :note WHERE id = :id")
     suspend fun setNote(id: Long, note: String?)
 }

@@ -9,6 +9,8 @@ An Android app that reads bank and UPI transaction SMS on your phone and asks yo
 3. A notification shows the amount and a guessed category.
 4. One tap saves it, or you change the category or add a note.
 
+Cash and anything else without an SMS can be added by hand with the Add button on the home screen.
+
 ## Status
 
 Early build. Android first, tested in India. iOS later through a Shortcuts automation, since iOS apps cannot read SMS. Work is tracked on the GitHub Projects board.

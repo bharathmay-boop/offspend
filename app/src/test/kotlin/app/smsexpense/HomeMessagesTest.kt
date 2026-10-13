@@ -32,7 +32,7 @@ class HomeMessagesTest {
             HomeScreen(
                 month = month, summaries = emptyList(), transactions = emptyList(), categories = emptyMap(),
                 importing = importing, notice = notice, onNoticeShown = { noticesShown++ },
-                appNotificationsOffer = offer, onPreviousMonth = {}, onNextMonth = null, onOpen = {}, onReview = {}, today = today,
+                appNotificationsOffer = offer, onPreviousMonth = {}, onNextMonth = null, onOpen = {}, onReview = {}, onAdd = {}, today = today,
             )
         }
     }

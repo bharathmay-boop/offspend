@@ -121,6 +121,10 @@ Shared pieces in `ui/components/`. Build new screens from these and from Materia
 - `displayMerchant`: shows a payee the way people write it (Swiggy, not SWIGGY), keeping short forms like KFC and IRCTC in capitals. Use it wherever a merchant name is shown, including the notification.
 - `PrivacyNote`: the short "stays on this phone" line with a lock icon.
 
+## Adding a payment by hand
+
+The home screen's one floating button, "Add" at the bottom right, opens the add sheet. The amount comes first with the number keypad already up, because it is the one thing always needed. Above it, a two-way toggle: Paid (default) or Received. The currency defaults to the one used most in the last 3 months. "Paid to" is optional and suggests names used before; a known name puts its learned category first as "Suggested". The date chip says "Today" and opens a date picker (no future dates). As on the category sheet, one tap on a category saves; with "Add note" open, a Save button does. Tapping a category without a valid amount saves nothing: it shows "Enter an amount above zero" and gives the reject haptic. Hand-added entries are stored as confirmed with source MANUAL.
+
 ## Reviewing payments that need a category
 
 When any payments in the month have no category, a line under the month card says "3 payments need a category" with a Review button. Review opens the category sheet for each in turn, with a "1 of 3" counter, and filing one moves straight to the next. A **Skip** chip after "Add note" leaves a payment as it is (no category, nothing learned) and moves on; it only shows in a review run. The line goes away when there is nothing left.

@@ -50,7 +50,7 @@ class ReviewTest {
             HomeScreen(
                 month = YearMonth.of(2026, 10), summaries = emptyList(), transactions = transactions, categories = emptyMap(),
                 importing = false, notice = null, onNoticeShown = {}, appNotificationsOffer = null,
-                onPreviousMonth = {}, onNextMonth = null, onOpen = {}, onReview = { reviewed = it }, today = today,
+                onPreviousMonth = {}, onNextMonth = null, onOpen = {}, onReview = { reviewed = it }, onAdd = {}, today = today,
             )
         }
     }
