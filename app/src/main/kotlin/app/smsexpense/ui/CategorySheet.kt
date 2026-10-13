@@ -1,6 +1,18 @@
 package app.smsexpense.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -40,6 +52,9 @@ import app.smsexpense.core.Direction
 import app.smsexpense.data.CategoryEntity
 import app.smsexpense.ui.components.AmountText
 import app.smsexpense.ui.components.CategoryChip
+import app.smsexpense.ui.components.CategoryIcon
+import app.smsexpense.ui.components.CategoryIconSize
+import app.smsexpense.ui.components.PickableIcons
 import app.smsexpense.ui.components.displayMerchant
 import app.smsexpense.ui.theme.AppTheme
 import app.smsexpense.ui.theme.Haptics
@@ -49,7 +64,7 @@ import kotlinx.coroutines.delay
 import java.math.BigDecimal
 
 /** What the sheet hands back when the payment is filed. A new category name wins over a picked one. */
-data class SheetResult(val categoryId: Long?, val newCategoryName: String?, val note: String)
+data class SheetResult(val categoryId: Long?, val newCategoryName: String?, val note: String, val newCategoryIcon: String? = null)
 
 /**
  * The content of the bottom sheet that files a transaction. In the usual case one tap on a category files it.
@@ -76,10 +91,14 @@ fun CategorySheet(
     var noting by rememberSaveable { mutableStateOf(!initialNote.isNullOrBlank()) }
     var creating by rememberSaveable { mutableStateOf(false) }
     var newName by rememberSaveable { mutableStateOf("") }
+    var newIcon by rememberSaveable { mutableStateOf<String?>(null) }
     // Set by a one-tap pick: the chip shows its check for a moment, then the sheet files and closes.
     var filing by rememberSaveable { mutableStateOf<Long?>(null) }
     val haptics = LocalHapticFeedback.current
-    val save by rememberUpdatedState { onSave(SheetResult(selected, newName.trim().ifEmpty { null }, note)) }
+    val save by rememberUpdatedState {
+        val typed = newName.trim().ifEmpty { null }
+        onSave(SheetResult(selected, typed, note, newIcon.takeIf { typed != null }))
+    }
 
     LaunchedEffect(filing) {
         if (filing == null) return@LaunchedEffect
@@ -110,6 +129,7 @@ fun CategorySheet(
                     selected = selected == c.id && newName.isBlank(),
                     filed = filing == c.id,
                     suggested = c.id == initialCategoryId,
+                    icon = c.icon,
                     onClick = {
                         if (filing != null) return@CategoryChip
                         selected = c.id
@@ -143,6 +163,7 @@ fun CategorySheet(
         }
 
         AnimatedVisibility(creating) {
+          Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             OutlinedTextField(
                 value = newName,
                 onValueChange = { newName = it.take(30) },
@@ -155,8 +176,12 @@ fun CategorySheet(
                         save()
                     }
                 }),
+                leadingIcon = { CategoryIcon(newName.trim().ifEmpty { null }, slot = -2, size = CategoryIconSize.small, icon = newIcon) },
                 modifier = Modifier.fillMaxWidth().testTag("newCategory"),
             )
+            // Optional: with no icon picked the category shows its first letter, as before.
+            IconPicker(newIcon, onPick = { newIcon = if (newIcon == it) null else it; haptics.performHapticFeedback(Haptics.tick) })
+          }
         }
 
         AnimatedVisibility(noting) {
@@ -178,6 +203,30 @@ fun CategorySheet(
                 enabled = selected != null || newName.isNotBlank(),
                 modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
             ) { Text("Save") }
+        }
+    }
+}
+
+/** A row of icons for a new category. Tap one to pick it, tap it again to go back to the letter. */
+@Composable
+private fun IconPicker(picked: String?, onPick: (String) -> Unit) {
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        PickableIcons.forEach { p ->
+            val on = p.key == picked
+            Box(
+                Modifier.size(48.dp)
+                    .background(if (on) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+                    .border(if (on) 2.dp else 0.dp, if (on) MaterialTheme.colorScheme.primary else Color.Transparent, CircleShape)
+                    .clip(CircleShape)
+                    .selectable(selected = on, onClick = { onPick(p.key) })
+                    .semantics { contentDescription = "${p.label} icon" },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painterResource(p.res), contentDescription = null,
+                    tint = if (on) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

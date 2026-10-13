@@ -78,12 +78,12 @@ class Ledger(
         return db.categories().byName(name)
     }
 
-    /** Creates a category if the name is new, and returns it either way. */
-    suspend fun categoryNamed(name: String): CategoryEntity {
+    /** Creates a category if the name is new (with the icon picked for it, if any), and returns it either way. */
+    suspend fun categoryNamed(name: String, icon: String? = null): CategoryEntity {
         val clean = name.trim()
         require(clean.isNotEmpty()) { "category name must not be empty" }
         db.categories().byName(clean)?.let { return it }
-        val id = db.categories().insert(CategoryEntity(name = clean, slot = db.categories().nextSlot()))
+        val id = db.categories().insert(CategoryEntity(name = clean, slot = db.categories().nextSlot(), icon = icon))
         return db.categories().all().first { it.id == id }
     }
 
@@ -95,8 +95,8 @@ class Ledger(
     }
 
     /** Saves what the person chose on the category sheet. A typed new category is created and used. */
-    suspend fun file(transactionId: Long, categoryId: Long?, newCategoryName: String?, note: String?) {
-        val chosen = newCategoryName?.takeIf { it.isNotBlank() }?.let { categoryNamed(it).id } ?: categoryId
+    suspend fun file(transactionId: Long, categoryId: Long?, newCategoryName: String?, note: String?, newCategoryIcon: String? = null) {
+        val chosen = newCategoryName?.takeIf { it.isNotBlank() }?.let { categoryNamed(it, newCategoryIcon).id } ?: categoryId
         chosen?.let { setCategory(transactionId, it) }
         setNote(transactionId, note)
     }

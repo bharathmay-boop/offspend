@@ -102,18 +102,52 @@ fun categoryIconRes(name: String): Int? = when (name) {
     else -> null
 }
 
+/** An icon the person can give a category they make. Same family (Material Symbols Rounded) as the built-in ones. */
+data class PickableIcon(val key: String, @DrawableRes val res: Int, val label: String)
+
+val PickableIcons = listOf(
+    PickableIcon("fitness_center", R.drawable.ic_fitness_center, "Fitness"),
+    PickableIcon("pets", R.drawable.ic_pets, "Pets"),
+    PickableIcon("home", R.drawable.ic_home, "Home"),
+    PickableIcon("child_care", R.drawable.ic_child_care, "Kids"),
+    PickableIcon("redeem", R.drawable.ic_redeem, "Gifts"),
+    PickableIcon("local_cafe", R.drawable.ic_local_cafe, "Coffee"),
+    PickableIcon("local_gas_station", R.drawable.ic_local_gas_station, "Fuel"),
+    PickableIcon("smartphone", R.drawable.ic_smartphone, "Phone"),
+    PickableIcon("school", R.drawable.ic_school, "Education"),
+    PickableIcon("spa", R.drawable.ic_spa, "Beauty"),
+    PickableIcon("checkroom", R.drawable.ic_checkroom, "Clothes"),
+    PickableIcon("sports_esports", R.drawable.ic_sports_esports, "Games"),
+    PickableIcon("local_bar", R.drawable.ic_local_bar, "Drinks"),
+    PickableIcon("savings", R.drawable.ic_savings, "Savings"),
+    PickableIcon("volunteer_activism", R.drawable.ic_volunteer_activism, "Charity"),
+    PickableIcon("celebration", R.drawable.ic_celebration, "Celebrations"),
+    PickableIcon("medication", R.drawable.ic_medication, "Medicine"),
+    PickableIcon("directions_car", R.drawable.ic_directions_car, "Car"),
+    PickableIcon("two_wheeler", R.drawable.ic_two_wheeler, "Bike"),
+    PickableIcon("bolt", R.drawable.ic_bolt, "Electricity"),
+    PickableIcon("water_drop", R.drawable.ic_water_drop, "Water"),
+    PickableIcon("menu_book", R.drawable.ic_menu_book, "Books"),
+    PickableIcon("build", R.drawable.ic_build, "Repairs"),
+    PickableIcon("content_cut", R.drawable.ic_content_cut, "Salon"),
+    PickableIcon("work", R.drawable.ic_work, "Work"),
+)
+
+@DrawableRes
+fun pickableIconRes(key: String): Int? = PickableIcons.firstOrNull { it.key == key }?.res
+
 /**
  * A category at a glance: its icon on a circle of its colour. A category the person made shows its first letter,
  * and a payment with no category shows a question mark. Decorative: the category name next to it is what TalkBack reads.
  */
 @Composable
-fun CategoryIcon(name: String?, slot: Int, modifier: Modifier = Modifier, size: Dp = CategoryIconSize.row) {
+fun CategoryIcon(name: String?, slot: Int, modifier: Modifier = Modifier, size: Dp = CategoryIconSize.row, icon: String? = null) {
     val bg = if (name == null) MaterialTheme.colorScheme.tertiaryContainer else categoryColor(slot)
     val fg = if (name == null) MaterialTheme.colorScheme.onTertiaryContainer else readableOn(bg)
     Box(modifier.size(size).background(bg, CircleShape).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
-        val icon = name?.let(::categoryIconRes)
-        if (icon != null) {
-            Icon(painterResource(icon), contentDescription = null, tint = fg, modifier = Modifier.size(size * 0.55f))
+        val res = icon?.let(::pickableIconRes) ?: name?.let(::categoryIconRes)
+        if (res != null) {
+            Icon(painterResource(res), contentDescription = null, tint = fg, modifier = Modifier.size(size * 0.55f))
         } else {
             Text(
                 name?.trim()?.firstOrNull()?.uppercase() ?: "?",
@@ -147,6 +181,7 @@ fun CategoryChip(
     modifier: Modifier = Modifier,
     filed: Boolean = false,
     suggested: Boolean = false,
+    icon: String? = null,
 ) {
     val container by animateColorAsState(
         if (selected || filed) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
@@ -163,7 +198,7 @@ fun CategoryChip(
                         Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(CategoryIconSize.small * 0.7f))
                     }
                 } else {
-                    CategoryIcon(name, slot, size = CategoryIconSize.small)
+                    CategoryIcon(name, slot, size = CategoryIconSize.small, icon = icon)
                 }
             }
         },
@@ -186,13 +221,14 @@ fun TransactionRow(
     currency: String,
     direction: Direction,
     modifier: Modifier = Modifier,
+    categoryIcon: String? = null,
 ) {
     Row(
         modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = Spacing.l, vertical = Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
-        CategoryIcon(category, categorySlot)
+        CategoryIcon(category, categorySlot, icon = categoryIcon)
         Column(Modifier.weight(1f)) {
             Text(merchant, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(

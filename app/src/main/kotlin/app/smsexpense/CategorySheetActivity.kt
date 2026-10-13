@@ -78,7 +78,7 @@ class CategorySheetActivity : ComponentActivity() {
                             }) else null,
                             onSave = { result ->
                                 scope.launch {
-                                    app.ledger.file(current.id, result.categoryId, result.newCategoryName, result.note)
+                                    app.ledger.file(current.id, result.categoryId, result.newCategoryName, result.note, result.newCategoryIcon)
                                     if (index < queue.lastIndex) {
                                         index++
                                     } else {

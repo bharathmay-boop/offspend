@@ -44,7 +44,7 @@ Brand color is a deep ledger green. Full role list is in `Color.kt`.
 
 ## Icons
 
-Material Symbols, **Rounded** family only, added as vector drawables in `res/drawable` (no icon library). Each built-in category has one (Food: restaurant, Groceries: shopping cart, and so on, mapped in `categoryIconRes`). A category the person creates shows its first letter instead, and a payment with no category shows a question mark on the tertiary container color.
+Material Symbols, **Rounded** family only, added as vector drawables in `res/drawable` (no icon library). Each built-in category has one (Food: restaurant, Groceries: shopping cart, and so on, mapped in `categoryIconRes`). When creating a category, the person can pick one of 25 icons from the same family (`PickableIcons`), shown as a scrolling row under the name field; tapping the picked one again clears it. With no icon picked, the category shows its first letter. A payment with no category shows a question mark on the tertiary container color.
 
 A category icon sits on a circle of the category's color, with the icon in ink or white, whichever has more contrast on that color. Sizes: 40dp at the start of a payment row, 24dp in chips and the spending breakdown. The icon is decorative: the category name next to it is what TalkBack reads.
 

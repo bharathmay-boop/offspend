@@ -31,6 +31,8 @@ data class CategoryEntity(
     val name: String,
     /** Which category color this uses (see DESIGN.md). Assigned in order, never reused. */
     val slot: Int,
+    /** An icon the person picked for a category they made (a key from `PickableIcons`), or null. */
+    val icon: String? = null,
 )
 
 /** What the person taught the app: this merchant goes in this category. */
