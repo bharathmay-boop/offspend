@@ -176,7 +176,8 @@ fun CategorySheet(
                         save()
                     }
                 }),
-                leadingIcon = { CategoryIcon(newName.trim().ifEmpty { null }, slot = -2, size = CategoryIconSize.small, icon = newIcon) },
+                // A neutral preview until the name is typed; null would mean "needs a category" and take its colour.
+                leadingIcon = { CategoryIcon(newName.trim().ifEmpty { "?" }, slot = -2, size = CategoryIconSize.small, icon = newIcon) },
                 modifier = Modifier.fillMaxWidth().testTag("newCategory"),
             )
             // Optional: with no icon picked the category shows its first letter, as before.
