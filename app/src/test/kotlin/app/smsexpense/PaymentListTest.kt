@@ -13,12 +13,15 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 
 // The payment list is scanned, not read (#56): day headers instead of a date on every row, names as people write them.
+// A tall screen, so every day header in the lazy list is composed.
+@Config(qualifiers = "w411dp-h1600dp")
 @RunWith(RobolectricTestRunner::class)
 class PaymentListTest {
     @get:Rule val compose = createComposeRule()
