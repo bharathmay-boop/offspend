@@ -65,6 +65,17 @@ class CategorySheetActivity : ComponentActivity() {
                             initialCategoryId = current.categoryId,
                             initialNote = current.note,
                             progress = if (queue.size > 1) "${index + 1} of ${queue.size}" else null,
+                            // Skip leaves the payment as it is: no category, no note, nothing learned.
+                            onSkip = if (queue.size > 1) ({
+                                if (index < queue.lastIndex) {
+                                    index++
+                                } else {
+                                    scope.launch {
+                                        sheetState.hide()
+                                        finish()
+                                    }
+                                }
+                            }) else null,
                             onSave = { result ->
                                 scope.launch {
                                     app.ledger.file(current.id, result.categoryId, result.newCategoryName, result.note)

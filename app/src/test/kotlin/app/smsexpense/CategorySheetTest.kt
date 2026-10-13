@@ -36,14 +36,16 @@ class CategorySheetTest {
     private val categories = listOf(CategoryEntity(1, "Food", 0), CategoryEntity(2, "Groceries", 1))
     private var saved: SheetResult? = null
 
-    private fun show(initialCategory: Long?, maxHeight: Int = 2000, initialNote: String? = null) = compose.setContent {
+    private var skipped = 0
+
+    private fun show(initialCategory: Long?, maxHeight: Int = 2000, initialNote: String? = null, canSkip: Boolean = false) = compose.setContent {
         ExpenseTheme {
             Box(Modifier.height(maxHeight.dp)) {
             CategorySheet(
                 amount = BigDecimal("320.00"), currency = "INR", direction = Direction.DEBIT,
                 merchant = "CALIFORNIA BURRITO", detail = "8 Oct · Account ··1234",
                 categories = categories, initialCategoryId = initialCategory, initialNote = initialNote,
-                onSave = { saved = it },
+                onSave = { saved = it }, onSkip = if (canSkip) ({ skipped++ }) else null,
             )
             }
         }
@@ -100,6 +102,18 @@ class CategorySheetTest {
         compose.onNodeWithTag("note").assertTextContains("Team lunch")
         compose.onNodeWithText("Save").performClick()
         assertEquals(SheetResult(1, null, "Team lunch"), saved)
+    }
+
+    @Test fun skipShowsOnlyInAReviewRunAndFilesNothing() {
+        show(1)
+        compose.onNodeWithText("Skip").assertDoesNotExist()
+    }
+
+    @Test fun skipCallsBackWithoutSaving() {
+        show(1, canSkip = true)
+        compose.onNodeWithText("Skip").performScrollTo().performClick()
+        assertEquals(1, skipped)
+        assertNull(saved)
     }
 
     @Test fun aNewCategoryIsFiledFromTheKeyboardDoneKey() {

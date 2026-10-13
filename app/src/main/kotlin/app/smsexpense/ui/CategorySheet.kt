@@ -68,6 +68,8 @@ fun CategorySheet(
     onSave: (SheetResult) -> Unit,
     /** "2 of 3" while reviewing several payments in a row. */
     progress: String? = null,
+    /** In a review run: move on and leave this payment without a category. Null hides Skip. */
+    onSkip: (() -> Unit)? = null,
 ) {
     var selected by rememberSaveable { mutableStateOf(initialCategoryId) }
     var note by rememberSaveable { mutableStateOf(initialNote.orEmpty()) }
@@ -134,6 +136,9 @@ fun CategorySheet(
                     leadingIcon = { Icon(painterResource(R.drawable.ic_edit_note), contentDescription = null, Modifier.size(AssistChipDefaults.IconSize)) },
                     modifier = Modifier.heightIn(min = 48.dp),
                 )
+            }
+            if (onSkip != null) {
+                AssistChip(onClick = { if (filing == null) onSkip() }, label = { Text("Skip") }, modifier = Modifier.heightIn(min = 48.dp))
             }
         }
 
