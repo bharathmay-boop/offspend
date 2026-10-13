@@ -128,8 +128,9 @@ fun HomeScreen(
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(notice) {
         if (notice == null) return@LaunchedEffect
-        onNoticeShown()
         snackbar.showSnackbar(notice)
+        // Only after it has been on screen: marking it shown clears the notice, which would cancel this effect.
+        onNoticeShown()
     }
 
     Box(Modifier.safeDrawingPadding()) {
