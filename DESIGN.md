@@ -90,6 +90,8 @@ A confirmation stays on screen for `Motion.CONFIRM_HOLD_MS` (350ms) before what 
 
 The month total counts from its last value to the new one with `Motion.count()` instead of jumping, so a change gets noticed. The spending bar grows in from the left the first time it shows. Check `reducedMotion()` for anything that would otherwise animate on its own: when animations are off, show the end state at once.
 
+Changing month slides the page like turning pages: a later month comes in from the right, an earlier one from the left, with a `Haptics.tick`. The chevron buttons and a horizontal swipe anywhere on the page both change month. The outgoing page keeps its own data while it leaves, so it never shows the new month's numbers.
+
 ## The month card
 
 One glance, not a table. The total is the largest thing on the screen. Under it, one bar split by category in each category's color shows the shape of the month. Under that, the top 4 categories as pills (icon and amount); the rest are added up as "Other", unless only one would be left over. Tapping the bar or a pill shows every category with its own bar, and "Show less" folds it back.
