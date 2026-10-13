@@ -4,6 +4,9 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -96,13 +99,15 @@ class EditDeleteTest {
 
     @Test fun theHomeScreenOffersUndoAfterADelete() {
         var undone: Long? = null
+        // The app clears this once it's marked shown, as MainActivity does; Undo must still be there.
+        var deleted by mutableStateOf<Long?>(5L)
         compose.setContent {
             ExpenseTheme {
                 HomeScreen(
                     month = YearMonth.of(2026, 10), summaries = emptyList(), transactions = emptyList(), categories = emptyMap(),
                     importing = false, notice = null, onNoticeShown = {}, appNotificationsOffer = null,
                     onPreviousMonth = {}, onNextMonth = null, onOpen = {}, onReview = {}, onAdd = {},
-                    justDeleted = 5L, onUndoDelete = { undone = it }, today = day,
+                    justDeleted = deleted, onUndoDelete = { undone = it }, onDeletedShown = { deleted = null }, today = day,
                 )
             }
         }
