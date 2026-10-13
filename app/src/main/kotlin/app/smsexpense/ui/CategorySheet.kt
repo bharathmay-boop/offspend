@@ -29,6 +29,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -37,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -85,7 +89,11 @@ fun CategorySheet(
     progress: String? = null,
     /** In a review run: move on and leave this payment without a category. Null hides Skip. */
     onSkip: (() -> Unit)? = null,
+    /** Edit and Delete in the overflow menu (#52). Null hides the menu. */
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
 ) {
+    var menu by remember { mutableStateOf(false) }
     var selected by rememberSaveable { mutableStateOf(initialCategoryId) }
     var note by rememberSaveable { mutableStateOf(initialNote.orEmpty()) }
     var noting by rememberSaveable { mutableStateOf(!initialNote.isNullOrBlank()) }
@@ -115,7 +123,20 @@ fun CategorySheet(
         verticalArrangement = Arrangement.spacedBy(Spacing.l),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            if (progress != null) Text(progress, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(progress.orEmpty(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                if (onEdit != null || onDelete != null) {
+                    Box {
+                        IconButton(onClick = { menu = true }) {
+                            Icon(painterResource(R.drawable.ic_more_vert), contentDescription = "More options")
+                        }
+                        DropdownMenu(menu, onDismissRequest = { menu = false }) {
+                            onEdit?.let { DropdownMenuItem(text = { Text("Edit") }, onClick = { menu = false; it() }) }
+                            onDelete?.let { DropdownMenuItem(text = { Text("Delete") }, onClick = { menu = false; it() }) }
+                        }
+                    }
+                }
+            }
             AmountText(amount, currency, direction, style = AppTheme.type.amountHero)
             Text(merchant?.let(::displayMerchant) ?: "Payee not named in the message", style = MaterialTheme.typography.titleMedium)
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

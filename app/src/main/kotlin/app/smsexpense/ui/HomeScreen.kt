@@ -58,8 +58,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -114,6 +116,10 @@ fun HomeScreen(
     onReview: (List<Long>) -> Unit,
     /** Opens the sheet to add a payment or money received by hand. */
     onAdd: () -> Unit,
+    /** An entry just deleted from a sheet: show "Payment deleted" with Undo (#52). */
+    justDeleted: Long? = null,
+    onUndoDelete: (Long) -> Unit = {},
+    onDeletedShown: () -> Unit = {},
     today: LocalDate = LocalDate.now(),
 ) {
     val zone = ZoneId.systemDefault()
@@ -130,6 +136,13 @@ fun HomeScreen(
     val view = MonthView(month, summaries, transactions)
 
     val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(justDeleted) {
+        val id = justDeleted ?: return@LaunchedEffect
+        onDeletedShown()
+        if (snackbar.showSnackbar("Payment deleted", actionLabel = "Undo", duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) {
+            onUndoDelete(id)
+        }
+    }
     LaunchedEffect(notice) {
         if (notice == null) return@LaunchedEffect
         onNoticeShown()

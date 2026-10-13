@@ -84,6 +84,7 @@ private fun Home(app: ExpenseApp) {
     val transactions by app.db.transactions().observeAll().collectAsState(initial = emptyList())
     val categories by app.db.categories().observeAll().collectAsState(initial = emptyList())
     val history by app.history.collectAsState()
+    val justDeleted by app.justDeleted.collectAsState()
     LaunchedEffect(Unit) { if (canReadInbox(app)) app.importHistoryOnce() }
     val prefs = remember { app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE) }
     var listenerOn by remember { mutableStateOf(PaymentNotificationListener.isEnabled(app)) }
@@ -137,6 +138,9 @@ private fun Home(app: ExpenseApp) {
         onOpen = { app.startActivity(CategorySheetActivity.intent(app, it.id)) },
         onReview = { app.startActivity(CategorySheetActivity.reviewIntent(app, it.toLongArray())) },
         onAdd = { app.startActivity(AddPaymentActivity.intent(app)) },
+        justDeleted = justDeleted,
+        onUndoDelete = { id -> app.scope.launch { app.ledger.restore(id) } },
+        onDeletedShown = { app.justDeleted.value = null },
     )
 }
 

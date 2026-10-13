@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import androidx.room.Upsert
 import app.smsexpense.core.Direction
 import kotlinx.coroutines.flow.Flow
@@ -14,8 +15,15 @@ interface TransactionDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(tx: TransactionEntity): Long
 
-    @Query("SELECT * FROM transactions ORDER BY occurredAt DESC")
+    /** Everything the person sees: deleted entries are left out. */
+    @Query("SELECT * FROM transactions WHERE deleted = 0 ORDER BY occurredAt DESC")
     fun observeAll(): Flow<List<TransactionEntity>>
+
+    @Update
+    suspend fun update(tx: TransactionEntity)
+
+    @Query("UPDATE transactions SET deleted = :deleted WHERE id = :id")
+    suspend fun setDeleted(id: Long, deleted: Boolean)
 
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun byId(id: Long): TransactionEntity?
@@ -33,7 +41,7 @@ interface TransactionDao {
     suspend fun fillMerchant(id: Long, merchant: String)
 
     /** Payees seen before, most recent first, for suggestions when adding by hand. */
-    @Query("SELECT merchant FROM transactions WHERE merchant IS NOT NULL GROUP BY merchant ORDER BY MAX(occurredAt) DESC LIMIT 200")
+    @Query("SELECT merchant FROM transactions WHERE merchant IS NOT NULL AND deleted = 0 GROUP BY merchant ORDER BY MAX(occurredAt) DESC LIMIT 200")
     suspend fun recentPayees(): List<String>
 
     /** Currencies of payments since a time, newest first, to pick the default for adding by hand. */

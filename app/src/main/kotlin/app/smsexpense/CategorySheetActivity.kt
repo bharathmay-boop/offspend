@@ -77,6 +77,22 @@ class CategorySheetActivity : ComponentActivity() {
                                     }
                                 }
                             }) else null,
+                            onEdit = {
+                                startActivity(AddPaymentActivity.editIntent(this@CategorySheetActivity, current.id))
+                                finish()
+                            },
+                            onDelete = {
+                                scope.launch {
+                                    app.ledger.delete(current.id)
+                                    app.justDeleted.value = current.id
+                                    if (index < queue.lastIndex) {
+                                        index++
+                                    } else {
+                                        sheetState.hide()
+                                        finish()
+                                    }
+                                }
+                            },
                             onSave = { result ->
                                 scope.launch {
                                     app.ledger.file(current.id, result.categoryId, result.newCategoryName, result.note, result.newCategoryIcon)

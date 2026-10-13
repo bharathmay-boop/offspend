@@ -26,6 +26,9 @@ class ExpenseApp : Application() {
     private val contained = CoroutineExceptionHandler { _, e -> Log.w("ExpenseApp", "background work failed: ${e.javaClass.simpleName}") }
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + contained)
 
+    /** The entry just deleted from a sheet, so the home screen can offer Undo (#52). */
+    val justDeleted = MutableStateFlow<Long?>(null)
+
     sealed interface History {
         data object NotStarted : History
         data object Reading : History

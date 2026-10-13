@@ -125,6 +125,10 @@ Shared pieces in `ui/components/`. Build new screens from these and from Materia
 
 The home screen's one floating button, "Add" at the bottom right, opens the add sheet. The amount comes first with the number keypad already up, because it is the one thing always needed. Above it, a two-way toggle: Paid (default) or Received. The currency defaults to the one used most in the last 3 months. "Paid to" is optional and suggests names used before; a known name puts its learned category first as "Suggested". The date chip says "Today" and opens a date picker (no future dates). As on the category sheet, one tap on a category saves; with "Add note" open, a Save button does. Tapping a category without a valid amount saves nothing: it shows "Enter an amount above zero" and gives the reject haptic. Hand-added entries are stored as confirmed with source MANUAL.
 
+## Editing and deleting
+
+Tapping a payment opens its sheet with a three-dot menu ("More options") holding Edit and Delete. Edit opens the add sheet filled in. An entry the person typed in can change in full. One read from a bank SMS or notification keeps its amount, currency and direction, which show disabled with "From your bank's message, so it can't be changed"; its payee, date, category and note can change. Delete has no confirm dialog. The home screen shows "Payment deleted" with Undo, which is quicker and just as safe. A deleted entry is kept and hidden, so the same message is never filed again by a catch-up.
+
 ## Reviewing payments that need a category
 
 When any payments in the month have no category, a line under the month card says "3 payments need a category" with a Review button. Review opens the category sheet for each in turn, with a "1 of 3" counter, and filing one moves straight to the next. A **Skip** chip after "Add note" leaves a payment as it is (no category, nothing learned) and moves on; it only shows in a review run. The line goes away when there is nothing left.

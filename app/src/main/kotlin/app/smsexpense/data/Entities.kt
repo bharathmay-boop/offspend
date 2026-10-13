@@ -1,5 +1,6 @@
 package app.smsexpense.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -23,6 +24,8 @@ data class TransactionEntity(
     val fingerprint: String,
     /** True once the person has confirmed or changed the category. */
     val confirmed: Boolean = false,
+    /** Deleted by the person. Kept, not removed, so the same message is never filed again by a catch-up. */
+    @ColumnInfo(defaultValue = "0") val deleted: Boolean = false,
 )
 
 @Entity(tableName = "categories", indices = [Index(value = ["name"], unique = true)])
