@@ -1,5 +1,8 @@
 package app.smsexpense
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -54,9 +57,28 @@ class HomeMessagesTest {
         compose.onNodeWithText("No payments", substring = true).assertDoesNotExist()
     }
 
+    // The app clears the notice once it's marked shown; that must not cancel the snackbar on screen.
+    @Test fun theNoticeStaysOnScreenWhenTheAppMarksItShown() {
+        var notice by mutableStateOf<String?>("Filed 9 payments from the last 3 months.")
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            ExpenseTheme {
+                HomeScreen(
+                    month = YearMonth.of(2026, 10), summaries = emptyList(), transactions = emptyList(), categories = emptyMap(),
+                    importing = false, notice = notice, onNoticeShown = { notice = null },
+                    appNotificationsOffer = null, onPreviousMonth = {}, onNextMonth = null, onOpen = {}, onReview = {}, today = today,
+                )
+            }
+        }
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.onNodeWithText("Filed 9 payments from the last 3 months.").assertExists()
+    }
+
     @Test fun theImportResultShowsOnceAsASnackbar() {
         show(notice = "Filed 9 payments from the last 3 months.")
         compose.onNodeWithText("Filed 9 payments from the last 3 months.").assertExists()
+        // Marked shown once the snackbar has had its time on screen.
+        compose.mainClock.advanceTimeBy(6_000)
         compose.waitForIdle()
         assertEquals(1, noticesShown)
     }
