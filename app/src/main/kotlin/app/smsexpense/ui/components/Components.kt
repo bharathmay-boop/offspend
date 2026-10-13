@@ -1,6 +1,11 @@
 package app.smsexpense.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -125,17 +130,42 @@ object CategoryIconSize {
 /** Ink or white, whichever reads better on this colour (WCAG contrast, the two meet at about 0.18 luminance). */
 private fun readableOn(bg: Color): Color = if (bg.luminance() > 0.18f) Color(0xFF171D1A) else Color.White
 
+/**
+ * A category to pick. [filed] swaps the icon for a check mark while the sheet closes, so the tap visibly landed.
+ * [suggested] marks the app's guess.
+ */
 @Composable
-fun CategoryChip(name: String, slot: Int, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun CategoryChip(
+    name: String,
+    slot: Int,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    filed: Boolean = false,
+    suggested: Boolean = false,
+) {
     val container by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        if (selected || filed) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         animationSpec = Motion.effects(), label = "chip",
     )
     FilterChip(
         selected = selected,
         onClick = onClick,
         label = { Text(name) },
-        leadingIcon = { CategoryIcon(name, slot, size = CategoryIconSize.small) },
+        leadingIcon = {
+            AnimatedContent(filed, transitionSpec = { scaleIn(Motion.fast()) + fadeIn(Motion.effects()) togetherWith fadeOut(Motion.effects()) }, label = "check") { done ->
+                if (done) {
+                    Box(Modifier.size(CategoryIconSize.small).background(MaterialTheme.colorScheme.primary, CircleShape), contentAlignment = Alignment.Center) {
+                        Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(CategoryIconSize.small * 0.7f))
+                    }
+                } else {
+                    CategoryIcon(name, slot, size = CategoryIconSize.small)
+                }
+            }
+        },
+        trailingIcon = if (suggested) {
+            { Text("Suggested", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        } else null,
         shape = CircleShape,
         colors = FilterChipDefaults.filterChipColors(containerColor = container, selectedContainerColor = container),
         modifier = modifier.heightIn(min = 48.dp),
