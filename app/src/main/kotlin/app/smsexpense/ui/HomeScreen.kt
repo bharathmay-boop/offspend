@@ -138,10 +138,11 @@ fun HomeScreen(
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(justDeleted) {
         val id = justDeleted ?: return@LaunchedEffect
-        onDeletedShown()
         if (snackbar.showSnackbar("Payment deleted", actionLabel = "Undo", duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) {
             onUndoDelete(id)
         }
+        // Only afterwards: marking it shown clears justDeleted, which would cancel this effect and the snackbar.
+        onDeletedShown()
     }
     LaunchedEffect(notice) {
         if (notice == null) return@LaunchedEffect
