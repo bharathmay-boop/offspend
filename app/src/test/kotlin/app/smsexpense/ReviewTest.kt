@@ -130,4 +130,17 @@ class ReviewSheetTest {
             assertNull(app.db.transactions().byId(b)!!.categoryId)
         }
     }
+
+    // Even a review of one payment can skip it (#74).
+    @Test fun aReviewOfOnePaymentCanStillSkip() {
+        val app = ApplicationProvider.getApplicationContext<ExpenseApp>()
+        shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        val a = runBlocking {
+            app.ledger.seedDefaultCategories()
+            app.onMessage(Source.SMS, "VM-CANBNK", "An amount of INR 5,050.00 has been DEBITED to your account XXX778 on 06/10/2026. - Canara Bank", 7_000L)!!
+        }
+        ActivityScenario.launch<CategorySheetActivity>(CategorySheetActivity.reviewIntent(app, longArrayOf(a))).use {
+            compose.onNodeWithText("Skip").performScrollTo().assertExists()
+        }
+    }
 }
