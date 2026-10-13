@@ -24,6 +24,8 @@ object TransactionNotifier {
     const val CHANNEL = "transactions"
     const val ACTION_CONFIRM = "app.smsexpense.CONFIRM"
     const val ACTION_NOTE = "app.smsexpense.NOTE"
+    const val ACTION_SAME = "app.smsexpense.SAME"
+    const val ACTION_SEPARATE = "app.smsexpense.SEPARATE"
     const val EXTRA_TX = "transaction_id"
     const val EXTRA_CATEGORY = "category_id"
     const val KEY_NOTE = "note"
@@ -89,6 +91,30 @@ object TransactionNotifier {
         updateSummary(context)
     }
 
+    /**
+     * The bank reported a payment the person already added by hand (#53). "Yes, same" is the default and needs no tap;
+     * "No, add it" files the bank's copy as a separate payment.
+     */
+    fun showSamePayment(context: Context, bank: TransactionEntity, handAdded: TransactionEntity) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+        ensureChannel(context)
+        val n = NotificationCompat.Builder(context, CHANNEL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title(bank))
+            .setContentText("You added this by hand. Same payment?")
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(openIntent(context, handAdded.id))
+            .setAutoCancel(true)
+            .setGroup(GROUP)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .addAction(0, "Yes, same", broadcast(context, ACTION_SAME, bank.id))
+            .addAction(0, "No, add it", broadcast(context, ACTION_SEPARATE, bank.id))
+            .build()
+        NotificationManagerCompat.from(context).notify(bank.id.toInt(), n)
+        updateSummary(context)
+    }
+
     fun dismiss(context: Context, txId: Long) {
         NotificationManagerCompat.from(context).cancel(txId.toInt())
         updateSummary(context)
@@ -124,7 +150,7 @@ object TransactionNotifier {
         val intent = Intent(context, NotificationActionReceiver::class.java).setAction(action).putExtra(EXTRA_TX, txId).apply(extras)
         // A reply action must be mutable so Android can attach the typed text.
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (mutable) PendingIntent.FLAG_MUTABLE else PendingIntent.FLAG_IMMUTABLE
-        val requestCode = (txId * 2 + if (action == ACTION_NOTE) 1 else 0).toInt()
+        val requestCode = (txId * 4 + when (action) { ACTION_NOTE -> 1; ACTION_SAME -> 2; ACTION_SEPARATE -> 3; else -> 0 }).toInt()
         return PendingIntent.getBroadcast(context, requestCode, intent, flags)
     }
 }

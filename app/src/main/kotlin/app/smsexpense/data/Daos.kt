@@ -22,6 +22,14 @@ interface TransactionDao {
     @Update
     suspend fun update(tx: TransactionEntity)
 
+    /** Hand-added entries not yet matched with a bank message, in a time window (#53). */
+    @Query(
+        "SELECT * FROM transactions WHERE source = 'MANUAL' AND deleted = 0 AND fingerprint LIKE 'manual-%' " +
+            "AND fingerprint NOT LIKE 'manual-matched-%' AND direction = :direction AND currency = :currency " +
+            "AND occurredAt BETWEEN :from AND :to ORDER BY occurredAt DESC",
+    )
+    suspend fun unmatchedHandAdded(direction: Direction, currency: String, from: Long, to: Long): List<TransactionEntity>
+
     @Query("UPDATE transactions SET deleted = :deleted WHERE id = :id")
     suspend fun setDeleted(id: Long, deleted: Boolean)
 
