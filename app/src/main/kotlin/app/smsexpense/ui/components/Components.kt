@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -232,12 +233,11 @@ fun displayMerchant(raw: String): String {
 private val SHORT_FORMS = setOf("IRCTC", "HDFC", "ICICI", "BSNL", "IOCL", "BPCL", "HPCL", "NEFT", "IMPS", "RTGS", "UPI", "EMI", "ATM")
 private val SMALL_WORDS = setOf("THE", "AND", "OF", "FOR", "TO", "BY", "AT", "IN", "ON", "PAY", "BAR", "CAB", "BUS", "CAR", "TEA", "ONE", "NEW", "BIG", "MY")
 
+/** The one-line privacy promise, with a lock. */
 @Composable
 fun PrivacyNote(modifier: Modifier = Modifier) {
-    Text(
-        "🔒  Your messages are read on this phone. Nothing is uploaded.",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier,
-    )
+    Row(modifier.semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+        Icon(painterResource(R.drawable.ic_lock), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+        Text("Read on this phone. Nothing is uploaded.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }

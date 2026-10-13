@@ -130,4 +130,6 @@ Shared pieces in `ui/components/`. Build new screens from these and from Materia
 
 ## Writing
 
+Say less. One short line per idea, and anything longer goes behind a button that expands in place ("What does it read?"), except what a policy needs on screen. Prefer an icon and a few words over a sentence.
+
 Use the words people use: "Paid", "Received", "Category", "Note". Not "debit transaction", not "entity". Buttons say what they do: "Looks right", "Change", "Add note". Errors say what happened and what to do next.
