@@ -13,6 +13,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.input.pointer.pointerInput
@@ -107,6 +108,8 @@ fun HomeScreen(
     onPreviousMonth: () -> Unit,
     onNextMonth: (() -> Unit)?,
     onOpen: (TransactionEntity) -> Unit,
+    /** Files these payments one after another. */
+    onReview: (List<Long>) -> Unit,
     today: LocalDate = LocalDate.now(),
 ) {
     val zone = ZoneId.systemDefault()
@@ -169,7 +172,7 @@ fun HomeScreen(
                         },
                     )
                 },
-            ) { v -> MonthList(v, categories, slotOf, importing, appNotificationsOffer, onOpen, today, zone) }
+            ) { v -> MonthList(v, categories, slotOf, importing, appNotificationsOffer, onOpen, onReview, today, zone) }
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
@@ -201,9 +204,11 @@ private fun MonthList(
     importing: Boolean,
     appNotificationsOffer: AppNotificationsOffer?,
     onOpen: (TransactionEntity) -> Unit,
+    onReview: (List<Long>) -> Unit,
     today: LocalDate,
     zone: ZoneId,
 ) {
+    val unfiled = v.transactions.filter { it.categoryId == null }.map { it.id }
     LazyColumn(Modifier.fillMaxSize()) {
         if (appNotificationsOffer != null) item { AppNotificationsCard(appNotificationsOffer) }
         if (v.summaries.isEmpty() && importing) {
@@ -226,6 +231,7 @@ private fun MonthList(
             }
         }
         items(v.summaries, key = { it.currency }) { s -> MonthCard(s, slotOf) }
+        if (unfiled.isNotEmpty()) item(key = "review") { ReviewPrompt(unfiled.size, onReview = { onReview(unfiled) }, Modifier.animateItem()) }
         // One header per day instead of a date on every row. The list arrives newest first, so groups keep that order.
         v.transactions.groupBy { Instant.ofEpochMilli(it.occurredAt).atZone(zone).toLocalDate() }.forEach { (day, onDay) ->
             item(key = "day-$day") {
@@ -411,6 +417,24 @@ private fun ImportPlaceholder() {
                 }
             }
         }
+    }
+}
+
+/** "3 payments need a category", with one button that files them in a row. */
+@Composable
+private fun ReviewPrompt(count: Int, onReview: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier.fillMaxWidth().padding(start = Spacing.l, end = Spacing.s, top = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+    ) {
+        CategoryIcon(null, -1, size = CategoryIconSize.small)
+        Text(
+            if (count == 1) "1 payment needs a category" else "$count payments need a category",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        FilledTonalButton(onClick = onReview, modifier = Modifier.heightIn(min = 48.dp)) { Text("Review") }
     }
 }
 

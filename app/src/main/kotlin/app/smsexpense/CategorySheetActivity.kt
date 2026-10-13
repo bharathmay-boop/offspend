@@ -12,9 +12,12 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import app.smsexpense.capture.TransactionNotifier
 import app.smsexpense.data.TransactionEntity
@@ -32,45 +35,63 @@ class CategorySheetActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val app = application as ExpenseApp
-        val txId = intent.getLongExtra(TransactionNotifier.EXTRA_TX, -1)
-        TransactionNotifier.dismiss(this, txId)
+        // One payment, or a run of them to review one after another (#62).
+        val queue = intent.getLongArrayExtra(EXTRA_QUEUE)?.toList() ?: listOf(intent.getLongExtra(TransactionNotifier.EXTRA_TX, -1))
+        queue.forEach { TransactionNotifier.dismiss(this, it) }
 
         setContent {
             ExpenseTheme {
+                var index by rememberSaveable { mutableIntStateOf(0) }
                 var tx by remember { mutableStateOf<TransactionEntity?>(null) }
-                LaunchedEffect(txId) { tx = app.db.transactions().byId(txId) ?: run { finish(); null } }
+                LaunchedEffect(index) { tx = app.db.transactions().byId(queue[index]) ?: run { finish(); null } }
                 val categories by app.db.categories().observeAll().collectAsState(initial = emptyList())
                 val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
                 val scope = rememberCoroutineScope()
                 val current = tx ?: return@ExpenseTheme
 
                 ModalBottomSheet(onDismissRequest = { finish() }, sheetState = sheetState) {
-                    CategorySheet(
-                        amount = current.amount,
-                        currency = current.currency,
-                        direction = current.direction,
-                        merchant = current.merchant,
-                        detail = listOfNotNull(
-                            DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(current.occurredAt)),
-                            current.accountLast4?.let { "Account ··$it" },
-                        ).joinToString(" · "),
-                        categories = categories,
-                        initialCategoryId = current.categoryId,
-                        initialNote = current.note,
-                        onSave = { result ->
-                            scope.launch {
-                                app.ledger.file(current.id, result.categoryId, result.newCategoryName, result.note)
-                                sheetState.hide()
-                                finish()
-                            }
-                        },
-                    )
+                    // A fresh sheet per payment, so nothing picked or typed carries over to the next one.
+                    key(current.id) {
+                        CategorySheet(
+                            amount = current.amount,
+                            currency = current.currency,
+                            direction = current.direction,
+                            merchant = current.merchant,
+                            detail = listOfNotNull(
+                                DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(current.occurredAt)),
+                                current.accountLast4?.let { "Account ··$it" },
+                            ).joinToString(" · "),
+                            categories = categories,
+                            initialCategoryId = current.categoryId,
+                            initialNote = current.note,
+                            progress = if (queue.size > 1) "${index + 1} of ${queue.size}" else null,
+                            onSave = { result ->
+                                scope.launch {
+                                    app.ledger.file(current.id, result.categoryId, result.newCategoryName, result.note)
+                                    if (index < queue.lastIndex) {
+                                        index++
+                                    } else {
+                                        sheetState.hide()
+                                        finish()
+                                    }
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
     }
 
     companion object {
+        private const val EXTRA_QUEUE = "app.smsexpense.QUEUE"
+
+        /** Files these payments one after another, with a "2 of 3" counter. */
+        fun reviewIntent(context: Context, txIds: LongArray): Intent =
+            Intent(context, CategorySheetActivity::class.java)
+                .putExtra(EXTRA_QUEUE, txIds)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+
         fun intent(context: Context, txId: Long): Intent =
             Intent(context, CategorySheetActivity::class.java)
                 .putExtra(TransactionNotifier.EXTRA_TX, txId)
