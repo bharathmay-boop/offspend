@@ -10,7 +10,7 @@ When your bank sends you a text about a payment, the app reads it on your phone 
 
 - It reads your text messages to find bank and UPI payment messages. OTPs, offers and personal messages are skipped and never stored.
 - It keeps only the amount, the payee's name, the date, the last digits of the account, and the category you pick. The message text itself is not saved.
-- It has no internet permission at all, so nothing can leave your phone. You can check this yourself: the app's page in your phone's settings lists no internet access.
+- It has no internet permission at all, so it has no way to send anything off your phone.
 
 ## Installing
 
