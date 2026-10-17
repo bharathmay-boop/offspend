@@ -53,12 +53,20 @@ object TransactionNotifier {
         return "$sign${formatMoney(tx.amount, tx.currency)} · $who"
     }
 
+    // The guess is already filed (#167), so the text says what it is; tapping the notification changes it.
     fun text(category: CategoryEntity?, note: String? = null): String {
-        val ask = if (category != null) "Filed under ${category.name}. Looks right?" else "Which category is this?"
-        return if (note.isNullOrBlank()) ask else "Note: $note. $ask"
+        val filed = if (category != null) "${category.name} · Tap to change" else "Needs a category"
+        return if (note.isNullOrBlank()) filed else "Note: $note · $filed"
     }
 
-    fun show(context: Context, tx: TransactionEntity, category: CategoryEntity?) {
+    /** "Okay" for a payee filed under this category before, "Yes, Food" the first time. Cut to fit a narrow phone. */
+    fun confirmLabel(categoryName: String, filedBefore: Boolean): String =
+        if (filedBefore) "Okay" else "Yes, " + if (categoryName.length > 15) categoryName.take(14).trimEnd() + "…" else categoryName
+
+    /**
+     * @param filedBefore this payee has been filed under [category] before, so the confirm button just says "Okay".
+     */
+    fun show(context: Context, tx: TransactionEntity, category: CategoryEntity?, filedBefore: Boolean = false) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
         ensureChannel(context)
 
@@ -76,10 +84,7 @@ object TransactionNotifier {
             .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
 
         if (category != null) {
-            builder.addAction(0, "Looks right", broadcast(context, ACTION_CONFIRM, tx.id) { putExtra(EXTRA_CATEGORY, category.id) })
-            builder.addAction(0, "Change", openIntent(context, tx.id))
-        } else {
-            builder.addAction(0, "Pick category", openIntent(context, tx.id))
+            builder.addAction(0, confirmLabel(category.name, filedBefore), broadcast(context, ACTION_CONFIRM, tx.id) { putExtra(EXTRA_CATEGORY, category.id) })
         }
         val noteInput = RemoteInput.Builder(KEY_NOTE).setLabel("Add a note").build()
         builder.addAction(

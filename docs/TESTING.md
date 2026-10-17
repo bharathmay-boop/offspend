@@ -37,7 +37,7 @@ Bharath may send you an `.apk` file instead.
 ## What to try in your first week
 
 - Make a few payments as you normally would (UPI, card, bank transfer) and check each one shows up.
-- Tap the notification and pick a category, or tap "Looks right".
+- The guessed category is already filed. Tap "Yes, <category>" (or "Okay" for a shop you've filed before) to clear it, or tap the notification to change it.
 - Add a cash payment by hand with the Add button.
 - Edit and delete an entry.
 - Look at the month summary at the top of the home screen.

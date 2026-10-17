@@ -9,6 +9,7 @@ import app.smsexpense.capture.TransactionNotifier
 import app.smsexpense.core.Source
 import app.smsexpense.data.AppDatabase
 import app.smsexpense.data.Ledger
+import app.smsexpense.data.TransactionEntity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -115,10 +116,15 @@ class ExpenseApp : Application() {
                 ledger.handAddedTwinOf(tx)?.let { TransactionNotifier.showSamePayment(this, tx, it) }
                 return id
             }
-            val category = tx.categoryId?.let { cid -> db.categories().all().firstOrNull { it.id == cid } }
-            TransactionNotifier.show(this, tx, category)
+            showPayment(tx)
         }
         return id
+    }
+
+    /** Shows a payment's notification with its category, and whether this payee was filed under it before (#167). */
+    suspend fun showPayment(tx: TransactionEntity) {
+        val category = tx.categoryId?.let { cid -> db.categories().all().firstOrNull { it.id == cid } }
+        TransactionNotifier.show(this, tx, category, ledger.filedBefore(tx))
     }
 
     private companion object {
