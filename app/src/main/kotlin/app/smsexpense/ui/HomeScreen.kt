@@ -14,6 +14,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.input.pointer.pointerInput
@@ -44,6 +45,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -110,6 +112,8 @@ fun HomeScreen(
     onOpen: (TransactionEntity) -> Unit,
     /** Files these payments one after another. */
     onReview: (List<Long>) -> Unit,
+    /** Opens the sheet to add a payment or money received by hand. */
+    onAdd: () -> Unit,
     today: LocalDate = LocalDate.now(),
 ) {
     val zone = ZoneId.systemDefault()
@@ -176,6 +180,13 @@ fun HomeScreen(
                 },
             ) { v -> MonthList(v, categories, slotOf, iconOf, importing, appNotificationsOffer, onOpen, onReview, today, zone) }
         }
+        // The one floating button on the screen, where the thumb is (#51).
+        ExtendedFloatingActionButton(
+            onClick = onAdd,
+            icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = null) },
+            text = { Text("Add") },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.l).semantics { contentDescription = "Add a payment" },
+        )
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 }
@@ -212,7 +223,8 @@ private fun MonthList(
     zone: ZoneId,
 ) {
     val unfiled = v.transactions.filter { it.categoryId == null }.map { it.id }
-    LazyColumn(Modifier.fillMaxSize()) {
+    // Room at the bottom so the Add button never covers the last payment.
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Spacing.xxxl * 2)) {
         if (appNotificationsOffer != null) item { AppNotificationsCard(appNotificationsOffer) }
         if (v.summaries.isEmpty() && importing) {
             item { ImportPlaceholder() }

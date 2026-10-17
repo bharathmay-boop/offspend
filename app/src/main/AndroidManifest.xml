@@ -30,6 +30,14 @@
         </activity>
 
         <activity
+            android:name=".AddPaymentActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".CategorySheetActivity"
             android:exported="false"
             android:excludeFromRecents="true"

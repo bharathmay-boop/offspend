@@ -35,7 +35,7 @@ class HomeMessagesTest {
             HomeScreen(
                 month = month, summaries = emptyList(), transactions = emptyList(), categories = emptyMap(),
                 importing = importing, notice = notice, onNoticeShown = { noticesShown++ },
-                appNotificationsOffer = offer, onPreviousMonth = {}, onNextMonth = null, onOpen = {}, onReview = {}, today = today,
+                appNotificationsOffer = offer, onPreviousMonth = {}, onNextMonth = null, onOpen = {}, onReview = {}, onAdd = {}, today = today,
             )
         }
     }
@@ -66,7 +66,7 @@ class HomeMessagesTest {
                 HomeScreen(
                     month = YearMonth.of(2026, 10), summaries = emptyList(), transactions = emptyList(), categories = emptyMap(),
                     importing = false, notice = notice, onNoticeShown = { notice = null },
-                    appNotificationsOffer = null, onPreviousMonth = {}, onNextMonth = null, onOpen = {}, onReview = {}, today = today,
+                    appNotificationsOffer = null, onPreviousMonth = {}, onNextMonth = null, onOpen = {}, onReview = {}, onAdd = {}, today = today,
                 )
             }
         }

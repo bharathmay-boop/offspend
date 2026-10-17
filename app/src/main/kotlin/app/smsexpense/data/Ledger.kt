@@ -7,7 +7,11 @@ import app.smsexpense.core.ModelFallback
 import app.smsexpense.core.SmsParser
 import app.smsexpense.core.SmsReading
 import app.smsexpense.core.Source
+import app.smsexpense.ui.AddResult
 import java.security.MessageDigest
+import java.time.Instant
+import java.time.ZoneId
+import java.util.UUID
 
 /** The app's operations on stored money, in one place so screens and receivers share them. */
 class Ledger(
@@ -101,10 +105,40 @@ class Ledger(
         setNote(transactionId, note)
     }
 
+    /**
+     * Saves a payment or money received that the person typed in (#51). It is confirmed, since they chose everything,
+     * and a payee filed under a category teaches the app that payee, like a correction does.
+     */
+    suspend fun addByHand(r: AddResult, now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): Long {
+        // Today means now; an earlier day gets noon, so it sorts sensibly within that day.
+        val at = if (r.date == Instant.ofEpochMilli(now).atZone(zone).toLocalDate()) now else r.date.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
+        val id = db.transactions().insert(
+            TransactionEntity(
+                direction = r.direction,
+                amount = r.amount,
+                currency = r.currency,
+                merchant = r.payee,
+                accountLast4 = null,
+                occurredAt = at,
+                categoryId = r.categoryId,
+                note = r.note.ifBlank { null },
+                source = MANUAL,
+                fingerprint = "manual-${UUID.randomUUID()}",
+                confirmed = true,
+            ),
+        )
+        if (r.payee != null && r.categoryId != null) {
+            db.merchantRules().upsert(MerchantRuleEntity(Categorizer.merchantKey(r.payee), r.categoryId))
+        }
+        return id
+    }
+
     suspend fun setNote(transactionId: Long, note: String?) =
         db.transactions().setNote(transactionId, note?.trim()?.takeIf { it.isNotEmpty() })
 
-    private companion object {
-        const val TWIN_WINDOW_MS = 10 * 60 * 1000L
+    companion object {
+        /** The source of an entry the person typed in. */
+        const val MANUAL = "MANUAL"
+        private const val TWIN_WINDOW_MS = 10 * 60 * 1000L
     }
 }
