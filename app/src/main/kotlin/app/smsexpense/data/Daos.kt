@@ -45,9 +45,6 @@ interface TransactionDao {
     )
     suspend fun fromOtherSourcesNear(direction: Direction, currency: String, source: String, from: Long, to: Long): List<TransactionEntity>
 
-    @Query("UPDATE transactions SET merchant = :merchant WHERE id = :id AND merchant IS NULL")
-    suspend fun fillMerchant(id: Long, merchant: String)
-
     /** Payees seen before, most recent first, for suggestions when adding by hand. */
     @Query("SELECT merchant FROM transactions WHERE merchant IS NOT NULL AND deleted = 0 GROUP BY merchant ORDER BY MAX(occurredAt) DESC LIMIT 200")
     suspend fun recentPayees(): List<String>
