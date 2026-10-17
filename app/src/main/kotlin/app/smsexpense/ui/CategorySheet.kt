@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -104,6 +105,8 @@ fun CategorySheet(
     onDelete: (() -> Unit)? = null,
     /** The app already knows a category for this payee, so a pick changes this payment only unless switched (#168). */
     knownPayee: Boolean = false,
+    /** Category ids by how often the person uses them, most first. Offered when there's no guess (#166). */
+    mostUsed: List<Long> = emptyList(),
 ) {
     var menu by remember { mutableStateOf(false) }
     var alwaysUse by rememberSaveable { mutableStateOf(false) }
@@ -115,6 +118,8 @@ fun CategorySheet(
     var newIcon by rememberSaveable { mutableStateOf<String?>(null) }
     // Set by a one-tap pick: the chip shows its check for a moment, then the sheet files and closes.
     var filing by rememberSaveable { mutableStateOf<Long?>(null) }
+    // The category is one row until the person asks to change it (#166).
+    var choosing by rememberSaveable { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
     val save by rememberUpdatedState {
         val typed = newName.trim().ifEmpty { null }
@@ -129,6 +134,24 @@ fun CategorySheet(
 
     // The app's guess first, so the most likely tap is the first chip.
     val ordered = categories.sortedByDescending { it.id == initialCategoryId }
+    // With no guess: the three used most, or the first three for a new install.
+    val quick = (mostUsed.mapNotNull { id -> categories.firstOrNull { it.id == id } } + categories.sortedBy { it.slot }).distinct().take(3)
+    val current = categories.firstOrNull { it.id == selected }
+
+    fun pick(c: CategoryEntity) {
+        if (filing != null) return
+        selected = c.id
+        newName = ""
+        creating = false
+        if (!noting) {
+            haptics.performHapticFeedback(Haptics.confirm)
+            filing = c.id
+        } else {
+            // A note is open, so Save files it; show the pick as the category row again.
+            haptics.performHapticFeedback(Haptics.tick)
+            choosing = false
+        }
+    }
 
     Column(
         // Scrolls and sits above the keyboard, so the field being typed in and Save stay visible.
@@ -155,49 +178,36 @@ fun CategorySheet(
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            ordered.forEach { c ->
-                CategoryChip(
-                    name = c.name,
-                    slot = c.slot,
-                    selected = selected == c.id && newName.isBlank(),
-                    filed = filing == c.id,
-                    suggested = c.id == initialCategoryId,
-                    icon = c.icon,
-                    onClick = {
-                        if (filing != null) return@CategoryChip
-                        selected = c.id
-                        newName = ""
-                        creating = false
-                        if (!noting) {
-                            haptics.performHapticFeedback(Haptics.confirm)
-                            filing = c.id
-                        } else {
-                            haptics.performHapticFeedback(Haptics.tick)
-                        }
-                    },
-                )
-            }
-            AssistChip(
-                onClick = { creating = true },
-                label = { Text("+ New category") },
-                modifier = Modifier.heightIn(min = 48.dp),
-            )
-            if (!noting) {
+        when {
+            choosing -> FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                ordered.forEach { c ->
+                    CategoryChip(
+                        name = c.name,
+                        slot = c.slot,
+                        selected = selected == c.id && newName.isBlank(),
+                        filed = filing == c.id,
+                        suggested = c.id == initialCategoryId,
+                        icon = c.icon,
+                        onClick = { pick(c) },
+                    )
+                }
                 AssistChip(
-                    onClick = { noting = true },
-                    label = { Text("Add note") },
-                    leadingIcon = { Icon(painterResource(R.drawable.ic_edit_note), contentDescription = null, Modifier.size(AssistChipDefaults.IconSize)) },
+                    onClick = { creating = true },
+                    label = { Text("+ New category") },
                     modifier = Modifier.heightIn(min = 48.dp),
                 )
             }
-            if (onSkip != null) {
-                AssistChip(onClick = { if (filing == null) onSkip() }, label = { Text("Skip") }, modifier = Modifier.heightIn(min = 48.dp))
+            current != null -> CategoryRow(current, onClick = { if (filing == null) { choosing = true; haptics.performHapticFeedback(Haptics.tick) } })
+            else -> FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                quick.forEach { c ->
+                    CategoryChip(name = c.name, slot = c.slot, selected = false, filed = filing == c.id, suggested = false, icon = c.icon, onClick = { pick(c) })
+                }
+                AssistChip(onClick = { choosing = true }, label = { Text("All categories") }, modifier = Modifier.heightIn(min = 48.dp))
             }
         }
 
         // Set before the tap, since one tap files. Off by default: a one-off shouldn't change every payment after it.
-        if (knownPayee && merchant != null) {
+        if (choosing && knownPayee && merchant != null) {
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 48.dp)
                     .toggleable(value = alwaysUse, role = Role.Switch, onValueChange = { alwaysUse = it; haptics.performHapticFeedback(Haptics.tick) }),
@@ -209,6 +219,22 @@ fun CategorySheet(
                     modifier = Modifier.weight(1f),
                 )
                 Switch(checked = alwaysUse, onCheckedChange = null)
+            }
+        }
+
+        if (!noting || onSkip != null) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                if (!noting) {
+                    AssistChip(
+                        onClick = { noting = true },
+                        label = { Text("Add note") },
+                        leadingIcon = { Icon(painterResource(R.drawable.ic_edit_note), contentDescription = null, Modifier.size(AssistChipDefaults.IconSize)) },
+                        modifier = Modifier.heightIn(min = 48.dp),
+                    )
+                }
+                if (onSkip != null) {
+                    AssistChip(onClick = { if (filing == null) onSkip() }, label = { Text("Skip") }, modifier = Modifier.heightIn(min = 48.dp))
+                }
             }
         }
 
@@ -255,6 +281,24 @@ fun CategorySheet(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
             ) { Text("Save") }
         }
+    }
+}
+
+/** The payment's category as one row; tapping it opens the full list (#166). */
+@Composable
+private fun CategoryRow(category: CategoryEntity, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(MaterialTheme.shapes.medium)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
+            .clickable(onClickLabel = "change", onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = "Category, ${category.name}" }
+            .padding(horizontal = Spacing.m),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+    ) {
+        CategoryIcon(category.name, category.slot, size = CategoryIconSize.small, icon = category.icon)
+        Text(category.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        Text("Tap to change", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

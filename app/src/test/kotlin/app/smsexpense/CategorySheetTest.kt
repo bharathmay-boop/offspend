@@ -33,19 +33,21 @@ import java.math.BigDecimal
 class CategorySheetTest {
     @get:Rule val compose = createComposeRule()
 
-    private val categories = listOf(CategoryEntity(1, "Food", 0), CategoryEntity(2, "Groceries", 1))
+    private val categories = listOf(
+        CategoryEntity(1, "Food", 0), CategoryEntity(2, "Groceries", 1), CategoryEntity(3, "Transport", 2), CategoryEntity(4, "Shopping", 3),
+    )
     private var saved: SheetResult? = null
 
     private var skipped = 0
 
-    private fun show(initialCategory: Long?, maxHeight: Int = 2000, initialNote: String? = null, canSkip: Boolean = false, knownPayee: Boolean = false) = compose.setContent {
+    private fun show(initialCategory: Long?, maxHeight: Int = 2000, initialNote: String? = null, canSkip: Boolean = false, knownPayee: Boolean = false, mostUsed: List<Long> = emptyList()) = compose.setContent {
         ExpenseTheme {
             Box(Modifier.height(maxHeight.dp)) {
             CategorySheet(
                 amount = BigDecimal("320.00"), currency = "INR", direction = Direction.DEBIT,
                 merchant = "CALIFORNIA BURRITO", detail = "8 Oct · Account ··1234",
                 categories = categories, initialCategoryId = initialCategory, initialNote = initialNote,
-                onSave = { saved = it }, onSkip = if (canSkip) ({ skipped++ }) else null, knownPayee = knownPayee,
+                onSave = { saved = it }, onSkip = if (canSkip) ({ skipped++ }) else null, knownPayee = knownPayee, mostUsed = mostUsed,
             )
             }
         }
@@ -54,6 +56,7 @@ class CategorySheetTest {
     // With the keyboard open the sheet gets only a strip of screen (#47); everything must still be reachable.
     @Test fun aShortSheetScrollsSoTheFieldsAndSaveStayReachable() {
         show(null, maxHeight = 300)
+        compose.onNodeWithText("All categories").performScrollTo().performClick()
         compose.onNodeWithText("+ New category").performScrollTo().performClick()
         compose.onNodeWithTag("newCategory").performScrollTo().performTextInput("Office")
         compose.onNodeWithText("Save").performScrollTo().performClick()
@@ -70,6 +73,7 @@ class CategorySheetTest {
     // One tap files it (#58): no Save to find in the common case.
     @Test fun tappingACategoryFilesThePaymentAtOnce() {
         show(1)
+        compose.onNodeWithText("Tap to change").performClick()
         compose.onNodeWithText("Groceries").performClick()
         // The check mark shows for a moment before the sheet files and closes.
         compose.mainClock.advanceTimeBy(Motion.CONFIRM_HOLD_MS + 100)
@@ -81,6 +85,7 @@ class CategorySheetTest {
     // #168: for a payee the app knows, a pick changes this payment only, unless the switch is on.
     @Test fun aKnownPayeeOffersToUseThePickEveryTime() {
         show(initialCategory = 1, knownPayee = true)
+        compose.onNodeWithText("Tap to change").performClick()
         compose.onNodeWithText("Use my pick for every California Burrito payment").performClick()
         compose.onNodeWithText("Groceries").performClick()
         compose.mainClock.advanceTimeBy(Motion.CONFIRM_HOLD_MS + 100)
@@ -90,11 +95,47 @@ class CategorySheetTest {
 
     @Test fun aNewPayeeHasNoSwitchBecauseThePickIsRememberedAnyway() {
         show(initialCategory = 1)
+        compose.onNodeWithText("Tap to change").performClick()
         compose.onNodeWithText("Use my pick for every California Burrito payment").assertDoesNotExist()
+    }
+
+    // #166: a guessed payment shows its category as one row, not every chip.
+    @Test fun aGuessedPaymentShowsOneCategoryRow() {
+        show(1)
+        compose.onNodeWithContentDescription("Category, Food").assertExists()
+        compose.onNodeWithText("Tap to change").assertExists()
+        compose.onNodeWithText("Groceries").assertDoesNotExist()
+        compose.onNodeWithText("+ New category").assertDoesNotExist()
+    }
+
+    @Test fun withNoGuessTheThreeMostUsedAreOffered() {
+        show(null, mostUsed = listOf(4, 3, 2))
+        compose.onNodeWithText("Shopping").assertExists()
+        compose.onNodeWithText("Transport").assertExists()
+        compose.onNodeWithText("Groceries").assertExists()
+        compose.onNodeWithText("Food").assertDoesNotExist()
+        compose.onNodeWithText("All categories").performClick()
+        compose.onNodeWithText("Food").assertExists()
+    }
+
+    @Test fun aNewInstallOffersTheFirstThreeCategories() {
+        show(null)
+        compose.onNodeWithText("Food").assertExists()
+        compose.onNodeWithText("Transport").assertExists()
+        compose.onNodeWithText("Shopping").assertDoesNotExist()
+    }
+
+    @Test fun aQuickPickFilesAtOnce() {
+        show(null, mostUsed = listOf(3))
+        compose.onNodeWithText("Transport").performClick()
+        compose.mainClock.advanceTimeBy(Motion.CONFIRM_HOLD_MS + 100)
+        compose.waitForIdle()
+        assertEquals(SheetResult(3, null, ""), saved)
     }
 
     @Test fun theGuessComesFirstAndIsLabelled() {
         show(2)
+        compose.onNodeWithText("Tap to change").performClick()
         compose.onNodeWithText("Suggested", useUnmergedTree = true).assertExists()
         val guess = compose.onNodeWithText("Groceries").getUnclippedBoundsInRoot().left
         val other = compose.onNodeWithText("Food").getUnclippedBoundsInRoot().left
@@ -105,6 +146,7 @@ class CategorySheetTest {
         show(1)
         compose.onNodeWithText("Add note").performClick()
         compose.onNodeWithTag("note").performTextInput("Weekly shop")
+        compose.onNodeWithText("Tap to change").performClick()
         compose.onNodeWithText("Groceries").performClick()
         compose.mainClock.advanceTimeBy(Motion.CONFIRM_HOLD_MS + 100)
         assertNull(saved)
@@ -133,6 +175,7 @@ class CategorySheetTest {
 
     @Test fun aNewCategoryIsFiledFromTheKeyboardDoneKey() {
         show(null)
+        compose.onNodeWithText("All categories").performClick()
         compose.onNodeWithText("+ New category").performClick()
         compose.onNodeWithTag("newCategory").performTextInput("Pets")
         compose.onNodeWithTag("newCategory").performImeAction()
