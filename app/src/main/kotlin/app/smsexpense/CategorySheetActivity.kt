@@ -36,6 +36,7 @@ class CategorySheetActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val app = application as ExpenseApp
         // One payment, or a run of them to review one after another (#62).
+        val reviewing = intent.hasExtra(EXTRA_QUEUE)
         val queue = intent.getLongArrayExtra(EXTRA_QUEUE)?.toList() ?: listOf(intent.getLongExtra(TransactionNotifier.EXTRA_TX, -1))
         queue.forEach { TransactionNotifier.dismiss(this, it) }
 
@@ -65,6 +66,17 @@ class CategorySheetActivity : ComponentActivity() {
                             initialCategoryId = current.categoryId,
                             initialNote = current.note,
                             progress = if (queue.size > 1) "${index + 1} of ${queue.size}" else null,
+                            // Skip leaves the payment as it is: no category, no note, nothing learned.
+                            onSkip = if (reviewing) ({
+                                if (index < queue.lastIndex) {
+                                    index++
+                                } else {
+                                    scope.launch {
+                                        sheetState.hide()
+                                        finish()
+                                    }
+                                }
+                            }) else null,
                             onSave = { result ->
                                 scope.launch {
                                     app.ledger.file(current.id, result.categoryId, result.newCategoryName, result.note)

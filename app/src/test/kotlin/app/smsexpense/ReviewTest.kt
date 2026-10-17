@@ -1,10 +1,13 @@
 package app.smsexpense
 
 import android.Manifest
+import android.os.Looper
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.smsexpense.core.Direction
@@ -16,6 +19,8 @@ import app.smsexpense.ui.theme.Motion
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -83,11 +88,11 @@ class ReviewSheetTest {
                 app.onMessage(Source.SMS, "VM-CANBNK", canara.format("2,000.00"), 2_000L)!!
         }
         ActivityScenario.launch<CategorySheetActivity>(CategorySheetActivity.reviewIntent(app, longArrayOf(a, b))).use {
-            compose.onNodeWithText("1 of 2").assertExists()
+            compose.onNodeWithText("1 of 2", useUnmergedTree = true).assertExists()
             compose.onNodeWithText("Food").performClick()
             compose.mainClock.advanceTimeBy(Motion.CONFIRM_HOLD_MS + 500)
             compose.waitForIdle()
-            compose.onNodeWithText("2 of 2").assertExists()
+            compose.onNodeWithText("2 of 2", useUnmergedTree = true).assertExists()
             compose.onNodeWithText("Groceries").performClick()
             compose.mainClock.advanceTimeBy(Motion.CONFIRM_HOLD_MS + 500)
             compose.waitForIdle()
@@ -95,6 +100,47 @@ class ReviewSheetTest {
         runBlocking {
             assertNotNull(app.db.transactions().byId(a)!!.categoryId)
             assertNotNull(app.db.transactions().byId(b)!!.categoryId)
+        }
+    }
+
+    // Some payments can't be filed yet; Skip leaves them as they are and moves on (#74).
+    @Test fun skipLeavesThePaymentWithoutACategoryAndMovesOn() {
+        val app = ApplicationProvider.getApplicationContext<ExpenseApp>()
+        shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        val canara = "An amount of INR %s has been DEBITED to your account XXX778 on 06/10/2026. - Canara Bank"
+        val (a, b) = runBlocking {
+            app.ledger.seedDefaultCategories()
+            app.onMessage(Source.SMS, "VM-CANBNK", canara.format("3,050.00"), 5_000L)!! to
+                app.onMessage(Source.SMS, "VM-CANBNK", canara.format("4,000.00"), 6_000L)!!
+        }
+        ActivityScenario.launch<CategorySheetActivity>(CategorySheetActivity.reviewIntent(app, longArrayOf(a, b))).use { scenario ->
+            compose.onNodeWithText("Skip").performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText("2 of 2", useUnmergedTree = true).assertExists()
+            compose.onNodeWithText("Skip").performScrollTo().performClick()
+            compose.mainClock.advanceTimeBy(2_000)
+            compose.waitForIdle()
+            shadowOf(Looper.getMainLooper()).idle()
+            var finishing = false
+            if (scenario.state != Lifecycle.State.DESTROYED) scenario.onActivity { finishing = it.isFinishing }
+            assertTrue("the sheet should close after the last payment", scenario.state == Lifecycle.State.DESTROYED || finishing)
+        }
+        runBlocking {
+            assertNull(app.db.transactions().byId(a)!!.categoryId)
+            assertNull(app.db.transactions().byId(b)!!.categoryId)
+        }
+    }
+
+    // Even a review of one payment can skip it (#74).
+    @Test fun aReviewOfOnePaymentCanStillSkip() {
+        val app = ApplicationProvider.getApplicationContext<ExpenseApp>()
+        shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        val a = runBlocking {
+            app.ledger.seedDefaultCategories()
+            app.onMessage(Source.SMS, "VM-CANBNK", "An amount of INR 5,050.00 has been DEBITED to your account XXX778 on 06/10/2026. - Canara Bank", 7_000L)!!
+        }
+        ActivityScenario.launch<CategorySheetActivity>(CategorySheetActivity.reviewIntent(app, longArrayOf(a))).use {
+            compose.onNodeWithText("Skip").performScrollTo().assertExists()
         }
     }
 }

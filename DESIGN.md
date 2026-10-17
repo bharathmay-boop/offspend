@@ -123,7 +123,7 @@ Shared pieces in `ui/components/`. Build new screens from these and from Materia
 
 ## Reviewing payments that need a category
 
-When any payments in the month have no category, a line under the month card says "3 payments need a category" with a Review button. Review opens the category sheet for each in turn, with a "1 of 3" counter, and filing one moves straight to the next. The line goes away when there is nothing left.
+When any payments in the month have no category, a line under the month card says "3 payments need a category" with a Review button. Review opens the category sheet for each in turn, with a "1 of 3" counter, and filing one moves straight to the next. A **Skip** chip after "Add note" leaves a payment as it is (no category, nothing learned) and moves on; it only shows in a review run. The line goes away when there is nothing left.
 
 ## Messages on the home screen
 
