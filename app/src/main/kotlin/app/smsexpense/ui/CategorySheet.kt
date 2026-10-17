@@ -66,6 +66,8 @@ fun CategorySheet(
     initialCategoryId: Long?,
     initialNote: String?,
     onSave: (SheetResult) -> Unit,
+    /** "2 of 3" while reviewing several payments in a row. */
+    progress: String? = null,
 ) {
     var selected by rememberSaveable { mutableStateOf(initialCategoryId) }
     var note by rememberSaveable { mutableStateOf(initialNote.orEmpty()) }
@@ -92,6 +94,7 @@ fun CategorySheet(
         verticalArrangement = Arrangement.spacedBy(Spacing.l),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            if (progress != null) Text(progress, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             AmountText(amount, currency, direction, style = AppTheme.type.amountHero)
             Text(merchant?.let(::displayMerchant) ?: "Payee not named in the message", style = MaterialTheme.typography.titleMedium)
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

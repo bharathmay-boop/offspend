@@ -135,6 +135,7 @@ private fun Home(app: ExpenseApp) {
         onPreviousMonth = { month = month.minusMonths(1) },
         onNextMonth = if (month < thisMonth) ({ month = month.plusMonths(1) }) else null,
         onOpen = { app.startActivity(CategorySheetActivity.intent(app, it.id)) },
+        onReview = { app.startActivity(CategorySheetActivity.reviewIntent(app, it.toLongArray())) },
     )
 }
 

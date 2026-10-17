@@ -39,7 +39,7 @@ class MonthMotionTest {
                 importing = false, notice = null, onNoticeShown = {}, appNotificationsOffer = null,
                 onPreviousMonth = { month = month.minusMonths(1) },
                 onNextMonth = if (month < current) ({ month = month.plusMonths(1) }) else null,
-                onOpen = {},
+                onOpen = {}, onReview = {},
             )
         }
     }
