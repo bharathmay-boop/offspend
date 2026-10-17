@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long press on the app icon: straight to the add sheet (#54). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="add_payment"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_add"
+        android:shortcutShortLabel="@string/shortcut_add">
+        <intent
+            android:action="app.smsexpense.ADD"
+            android:targetPackage="app.smsexpense"
+            android:targetClass="app.smsexpense.MainActivity" />
+    </shortcut>
+</shortcuts>

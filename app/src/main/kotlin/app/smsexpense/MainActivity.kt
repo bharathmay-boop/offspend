@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val app = application as ExpenseApp
+        if (savedInstanceState == null) openAddIfAsked(intent)
         setContent {
             ExpenseTheme {
                 Surface(Modifier.fillMaxSize()) {
@@ -70,6 +71,20 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openAddIfAsked(intent)
+    }
+
+    /** The "Add payment" shortcut on the app icon lands here (#54). */
+    private fun openAddIfAsked(intent: Intent?) {
+        if (intent?.action == ACTION_ADD) startActivity(AddPaymentActivity.intent(this))
+    }
+
+    companion object {
+        const val ACTION_ADD = "app.smsexpense.ADD"
     }
 
     private fun hasSmsPermission() =
