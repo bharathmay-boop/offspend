@@ -30,6 +30,7 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
@@ -49,10 +50,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -93,7 +97,11 @@ fun HomeScreen(
     summaries: List<CurrencyMonth>,
     transactions: List<TransactionEntity>,
     categories: Map<Long, CategoryEntity>,
-    banner: String?,
+    /** True while the first 3 month import runs: placeholder rows instead of "no payments". */
+    importing: Boolean,
+    /** A one-time message, such as how many payments the first import filed. Shown as a snackbar. */
+    notice: String?,
+    onNoticeShown: () -> Unit,
     /** Shown until payment app notifications are turned on or the offer is dismissed. */
     appNotificationsOffer: AppNotificationsOffer?,
     onPreviousMonth: () -> Unit,
@@ -107,50 +115,64 @@ fun HomeScreen(
     val reduce = reducedMotion()
     val previous = { haptics.performHapticFeedback(Haptics.tick); onPreviousMonth() }
     val next = onNextMonth?.let { go -> { haptics.performHapticFeedback(Haptics.tick); go() } }
+    // The swipe handler outlives recompositions, so it reads the latest callbacks rather than the first ones.
+    val swipeBack by rememberUpdatedState(previous)
+    val swipeForward by rememberUpdatedState(next)
     // The old month keeps its own data while it slides out, so the outgoing screen never shows the new month's numbers.
     val view = MonthView(month, summaries, transactions)
 
-    Column(Modifier.safeDrawingPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.xs, vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = previous) {
-                Icon(painterResource(R.drawable.ic_chevron_left), contentDescription = "Previous month")
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(notice) {
+        if (notice == null) return@LaunchedEffect
+        snackbar.showSnackbar(notice)
+        // Only after it has been on screen: marking it shown clears the notice, which would cancel this effect.
+        onNoticeShown()
+    }
+
+    Box(Modifier.safeDrawingPadding()) {
+        Column {
+            Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.xs, vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = previous) {
+                    Icon(painterResource(R.drawable.ic_chevron_left), contentDescription = "Previous month")
+                }
+                AnimatedContent(
+                    month,
+                    transitionSpec = { monthSlide(initialState, targetState, reduce) },
+                    modifier = Modifier.weight(1f),
+                    label = "month title",
+                ) { m ->
+                    Text(
+                        m.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().semantics { heading() },
+                    )
+                }
+                IconButton(onClick = { next?.invoke() }, enabled = next != null) {
+                    Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = "Next month")
+                }
             }
             AnimatedContent(
-                month,
-                transitionSpec = { monthSlide(initialState, targetState, reduce) },
-                modifier = Modifier.weight(1f),
-                label = "month title",
-            ) { m ->
-                Text(
-                    m.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().semantics { heading() },
-                )
-            }
-            IconButton(onClick = { next?.invoke() }, enabled = next != null) {
-                Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = "Next month")
-            }
+                view,
+                transitionSpec = { monthSlide(initialState.month, targetState.month, reduce) },
+                contentKey = { it.month },
+                label = "month",
+                modifier = Modifier.fillMaxSize().testTag("month").pointerInput(Unit) {
+                    var dx = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { dx = 0f },
+                        onHorizontalDrag = { _, amount -> dx += amount },
+                        onDragEnd = {
+                            when (swipeStep(dx, threshold = Spacing.xxxl.toPx())) {
+                                -1 -> swipeBack()
+                                1 -> swipeForward?.invoke()
+                            }
+                        },
+                    )
+                },
+            ) { v -> MonthList(v, categories, slotOf, importing, appNotificationsOffer, onOpen, today, zone) }
         }
-        AnimatedContent(
-            view,
-            transitionSpec = { monthSlide(initialState.month, targetState.month, reduce) },
-            contentKey = { it.month },
-            label = "month",
-            modifier = Modifier.fillMaxSize().testTag("month").pointerInput(next) {
-                var dx = 0f
-                detectHorizontalDragGestures(
-                    onDragStart = { dx = 0f },
-                    onHorizontalDrag = { _, amount -> dx += amount },
-                    onDragEnd = {
-                        when (swipeStep(dx, threshold = Spacing.xxxl.toPx())) {
-                            -1 -> previous()
-                            1 -> next?.invoke()
-                        }
-                    },
-                )
-            },
-        ) { v -> MonthList(v, categories, slotOf, banner, appNotificationsOffer, onOpen, today, zone) }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 }
 
@@ -177,29 +199,24 @@ private fun MonthList(
     v: MonthView,
     categories: Map<Long, CategoryEntity>,
     slotOf: Map<String, Int>,
-    banner: String?,
+    importing: Boolean,
     appNotificationsOffer: AppNotificationsOffer?,
     onOpen: (TransactionEntity) -> Unit,
     today: LocalDate,
     zone: ZoneId,
 ) {
     LazyColumn(Modifier.fillMaxSize()) {
-        if (banner != null) {
-            item {
-                Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.l, vertical = Spacing.s),
-                ) {
-                    Text(banner, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(Spacing.l))
-                }
-            }
-        }
         if (appNotificationsOffer != null) item { AppNotificationsCard(appNotificationsOffer) }
-        if (v.summaries.isEmpty()) {
+        if (v.summaries.isEmpty() && importing) {
+            item { ImportPlaceholder() }
+        } else if (v.summaries.isEmpty()) {
             item {
                 Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    Text("No payments this month yet", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (v.month == YearMonth.from(today)) "No payments this month yet"
+                        else "No payments in ${v.month.format(DateTimeFormatter.ofPattern("MMMM"))}",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                     Text(
                         "When your bank texts you about a payment, it shows up here and you get a notification to file it.",
                         style = MaterialTheme.typography.bodyLarge,
@@ -380,6 +397,24 @@ private fun CategoryBar(category: String?, slot: Int, share: Float, amount: Stri
     }
 }
 
+/** Rows in the shape of the list while the first import runs, so the screen never claims there are no payments. Static: no shimmer. */
+@Composable
+private fun ImportPlaceholder() {
+    val block = MaterialTheme.colorScheme.surfaceContainerHigh
+    Column(Modifier.padding(Spacing.l).testTag("placeholder"), verticalArrangement = Arrangement.spacedBy(Spacing.l)) {
+        Text("Reading your last 3 months of bank messages…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        repeat(4) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(CategoryIconSize.row).background(block, CircleShape))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    Box(Modifier.fillMaxWidth(0.5f).height(Spacing.l).background(block, MaterialTheme.shapes.extraSmall))
+                    Box(Modifier.fillMaxWidth(0.3f).height(Spacing.m).background(block, MaterialTheme.shapes.extraSmall))
+                }
+            }
+        }
+    }
+}
+
 class AppNotificationsOffer(val onTurnOn: () -> Unit, val onNotNow: () -> Unit)
 
 @Composable
@@ -392,9 +427,7 @@ private fun AppNotificationsCard(offer: AppNotificationsOffer) {
         Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             Text("Catch UPI app payments too", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Some payments, like small UPI ones, don't come with a bank SMS. With notification access, the app " +
-                    "also reads payment notifications from Google Pay, PhonePe, Paytm and bank apps. Notifications " +
-                    "from every other app are ignored, and nothing leaves this phone.",
+                "Small UPI payments often skip the SMS.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

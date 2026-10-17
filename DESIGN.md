@@ -121,6 +121,10 @@ Shared pieces in `ui/components/`. Build new screens from these and from Materia
 - `displayMerchant`: shows a payee the way people write it (Swiggy, not SWIGGY), keeping short forms like KFC and IRCTC in capitals. Use it wherever a merchant name is shown, including the notification.
 - `PrivacyNote`: the short "stays on this phone" line with a lock icon.
 
+## Messages on the home screen
+
+A message that is news once (how many payments the first import filed) is a snackbar, shown once, never a banner that stays. Cards that stay, like the offer to read UPI app notifications, get a title, one line and their buttons. While the first import runs, the list shows static placeholder rows in its own shape instead of claiming there are no payments. An empty month that is over says "No payments in September", never "yet".
+
 ## Accessibility
 
 - Touch targets at least 48 by 48dp.
