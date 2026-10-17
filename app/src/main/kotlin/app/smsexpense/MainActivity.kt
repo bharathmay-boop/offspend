@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun Home(app: ExpenseApp) {
     val zone = remember { ZoneId.systemDefault() }
-    val thisMonth = remember { YearMonth.now(zone) }
+    var thisMonth by remember { mutableStateOf(YearMonth.now(zone)) }
     var month by rememberSaveable { mutableStateOf(thisMonth) }
     val transactions by app.db.transactions().observeAll().collectAsState(initial = emptyList())
     val categories by app.db.categories().observeAll().collectAsState(initial = emptyList())
@@ -91,6 +91,10 @@ private fun Home(app: ExpenseApp) {
     // Coming back from Settings is a resume, so check again then.
     LifecycleResumeEffect(Unit) {
         listenerOn = PaymentNotificationListener.isEnabled(app)
+        // The app may have stayed open into a new month.
+        val now = YearMonth.now(zone)
+        month = followCurrentMonth(selected = month, oldCurrent = thisMonth, newCurrent = now)
+        thisMonth = now
         onPauseOrDispose {}
     }
     val byId = categories.associateBy { it.id }
@@ -128,3 +132,7 @@ private fun Home(app: ExpenseApp) {
 
 private fun canReadInbox(app: ExpenseApp) =
     ContextCompat.checkSelfPermission(app, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+
+/** If the person was looking at the current month when the month changed, move them to the new one. */
+internal fun followCurrentMonth(selected: YearMonth, oldCurrent: YearMonth, newCurrent: YearMonth): YearMonth =
+    if (selected == oldCurrent) newCurrent else selected
