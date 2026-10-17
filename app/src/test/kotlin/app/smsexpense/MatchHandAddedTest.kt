@@ -61,6 +61,21 @@ class MatchHandAddedTest {
         assertEquals(2, visible().size)
     }
 
+    // #171: the bank's text confirms the hand-added payment, and goes with the bank's copy on "No, add it".
+    @Test fun theBankTextConfirmsTheHandAddedPayment() = runTest {
+        val manual = addByHand(t0)
+        app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)
+        assertEquals(listOf("MANUAL", "SMS"), app.db.sightings().forTransaction(manual).map { it.source })
+    }
+
+    @Test fun noAddItTakesTheBankTextsSightingWithIt() = runTest {
+        val manual = addByHand(t0)
+        val bank = app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)!!
+        NotificationActionReceiver.handle(app, Intent(TransactionNotifier.ACTION_SEPARATE), bank)
+        assertEquals(listOf("MANUAL"), app.db.sightings().forTransaction(manual).map { it.source })
+        assertEquals(listOf("SMS"), app.db.sightings().forTransaction(bank).map { it.source })
+    }
+
     @Test fun aHandAddedPaymentFromMoreThanADayBeforeIsNotMatched() = runTest {
         addByHand(t0)
         app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 30 * 60 * 60 * 1000L)

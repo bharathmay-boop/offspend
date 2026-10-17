@@ -94,4 +94,7 @@ interface SightingDao {
 
     @Query("SELECT * FROM sightings WHERE transactionId = :transactionId ORDER BY seenAt, id")
     suspend fun forTransaction(transactionId: Long): List<SightingEntity>
+
+    @Query("UPDATE sightings SET transactionId = :transactionId WHERE fingerprint = :fingerprint")
+    suspend fun moveTo(fingerprint: String, transactionId: Long)
 }
