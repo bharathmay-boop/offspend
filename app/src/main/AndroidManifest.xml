@@ -4,6 +4,7 @@
     <!-- Used only to read bank transaction messages on the phone. See PermissionScreen. -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".ExpenseApp"
@@ -28,5 +29,9 @@
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".capture.NotificationActionReceiver"
+            android:exported="false" />
     </application>
 </manifest>

@@ -1,0 +1,77 @@
+package app.smsexpense
+
+import android.Manifest
+import android.app.NotificationManager
+import android.content.Intent
+import android.os.Bundle
+import androidx.core.app.RemoteInput
+import androidx.test.core.app.ApplicationProvider
+import app.smsexpense.capture.NotificationActionReceiver
+import app.smsexpense.capture.TransactionNotifier
+import app.smsexpense.core.Categorizer
+import app.smsexpense.core.Source
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+
+@RunWith(RobolectricTestRunner::class)
+class NotificationTest {
+    private lateinit var app: ExpenseApp
+    private val payment = "Sent Rs.320.00\nFrom HDFC Bank A/C *1234\nTo CALIFORNIA BURRITO\nOn 08/10/26\nRef 412398765012"
+    private val notifications get() = shadowOf(app.getSystemService(NotificationManager::class.java)).allNotifications
+
+    @Before fun setUp() = runTest {
+        app = ApplicationProvider.getApplicationContext()
+        shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        app.ledger.seedDefaultCategories()
+    }
+
+    @Test fun aNewPaymentShowsTheAmountGuessAndOneTapActions() = runTest {
+        app.onMessage(Source.SMS, "AD-HDFCBK", payment, 1_000L)
+        val n = notifications.single()
+        assertEquals("−₹320.00 · CALIFORNIA BURRITO", n.extras.getString("android.title"))
+        assertEquals("Filed under Food. Looks right?", n.extras.getString("android.text"))
+        assertEquals(listOf("Looks right", "Change", "Add note"), n.actions.map { it.title.toString() })
+    }
+
+    @Test fun anUnknownPayeeAsksForACategoryInstead() = runTest {
+        app.onMessage(Source.SMS, "VM-CANBNK", "An amount of INR 1,050.00 has been DEBITED to your account XXX778 on 06/10/2026. - Canara Bank", 2_000L)
+        val n = notifications.single()
+        assertEquals("Which category is this?", n.extras.getString("android.text"))
+        assertEquals(listOf("Pick category", "Add note"), n.actions.map { it.title.toString() })
+    }
+
+    @Test fun historyImportsDoNotNotify() = runTest {
+        app.onMessage(Source.SMS, "AD-HDFCBK", payment, 3_000L, notify = false)
+        assertTrue(notifications.isEmpty())
+    }
+
+    @Test fun looksRightConfirmsLearnsAndDismisses() = runTest {
+        val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 4_000L)!!
+        val food = app.db.categories().byName("Food")!!
+        NotificationActionReceiver.handle(
+            app,
+            Intent(TransactionNotifier.ACTION_CONFIRM).putExtra(TransactionNotifier.EXTRA_CATEGORY, food.id),
+            id,
+        )
+        assertTrue(app.db.transactions().byId(id)!!.confirmed)
+        assertTrue(app.db.merchantRules().all().any { it.merchantKey == Categorizer.merchantKey("CALIFORNIA BURRITO") })
+        assertTrue(notifications.isEmpty())
+    }
+
+    @Test fun aReplyFromTheNotificationIsSavedAsTheNote() = runTest {
+        val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 5_000L)!!
+        val intent = Intent(TransactionNotifier.ACTION_NOTE)
+        RemoteInput.addResultsToIntent(
+            arrayOf(RemoteInput.Builder(TransactionNotifier.KEY_NOTE).build()), intent,
+            Bundle().apply { putCharSequence(TransactionNotifier.KEY_NOTE, "Team lunch") },
+        )
+        NotificationActionReceiver.handle(app, intent, id)
+        assertEquals("Team lunch", app.db.transactions().byId(id)!!.note)
+    }
+}
