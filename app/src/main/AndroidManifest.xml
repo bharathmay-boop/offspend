@@ -3,6 +3,8 @@
 
     <!-- Used only to read bank transaction messages on the phone. See PermissionScreen. -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <!-- Read once on setup to file the last 3 months, then only to catch up on missed messages. -->
+    <uses-permission android:name="android.permission.READ_SMS" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 

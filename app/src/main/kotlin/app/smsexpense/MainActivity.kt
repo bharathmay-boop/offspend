@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,12 +43,13 @@ class MainActivity : ComponentActivity() {
                     var denied by remember { mutableStateOf(false) }
                     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
                         granted = result[Manifest.permission.RECEIVE_SMS] == true
+                        if (result[Manifest.permission.READ_SMS] == true) app.importHistoryOnce()
                         denied = !granted
                     }
                     if (!granted) {
                         PermissionScreen(
                             deniedBefore = denied,
-                            onAllow = { ask.launch(arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.POST_NOTIFICATIONS)) },
+                            onAllow = { ask.launch(arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS, Manifest.permission.POST_NOTIFICATIONS)) },
                             onOpenSettings = {
                                 startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
                             },
@@ -71,6 +73,8 @@ private fun Home(app: ExpenseApp) {
     var month by rememberSaveable { mutableStateOf(thisMonth) }
     val transactions by app.db.transactions().observeAll().collectAsState(initial = emptyList())
     val categories by app.db.categories().observeAll().collectAsState(initial = emptyList())
+    val history by app.history.collectAsState()
+    LaunchedEffect(Unit) { if (canReadInbox(app)) app.importHistoryOnce() }
     val byId = categories.associateBy { it.id }
     val entries = transactions.map { Entry(it.direction, it.amount, it.currency, it.categoryId?.let(byId::get)?.name, it.occurredAt) }
 
@@ -79,8 +83,16 @@ private fun Home(app: ExpenseApp) {
         summaries = MonthlySummary.of(entries, month, zone),
         transactions = transactions.filter { MonthlySummary.monthOf(it.occurredAt, zone) == month },
         categories = byId,
+        banner = when (val h = history) {
+            ExpenseApp.History.Reading -> "Reading your last 3 months of bank messages…"
+            is ExpenseApp.History.Done -> if (h.found > 0) "Filed ${h.found} payments from the last 3 months." else null
+            ExpenseApp.History.NotStarted -> null
+        },
         onPreviousMonth = { month = month.minusMonths(1) },
         onNextMonth = if (month < thisMonth) ({ month = month.plusMonths(1) }) else null,
         onOpen = { app.startActivity(CategorySheetActivity.intent(app, it.id)) },
     )
 }
+
+private fun canReadInbox(app: ExpenseApp) =
+    ContextCompat.checkSelfPermission(app, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
