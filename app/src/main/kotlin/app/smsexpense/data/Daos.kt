@@ -45,6 +45,10 @@ interface TransactionDao {
     )
     suspend fun fromOtherSourcesNear(direction: Direction, currency: String, source: String, from: Long, to: Long): List<TransactionEntity>
 
+    /** Category ids by how many payments use them, most first, for the sheet's quick picks (#166). */
+    @Query("SELECT categoryId FROM transactions WHERE categoryId IS NOT NULL AND deleted = 0 GROUP BY categoryId ORDER BY COUNT(*) DESC LIMIT 3")
+    suspend fun mostUsedCategories(): List<Long>
+
     /** Payees seen before, most recent first, for suggestions when adding by hand. */
     @Query("SELECT merchant FROM transactions WHERE merchant IS NOT NULL AND deleted = 0 GROUP BY merchant ORDER BY MAX(occurredAt) DESC LIMIT 200")
     suspend fun recentPayees(): List<String>

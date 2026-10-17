@@ -45,6 +45,8 @@ class CategorySheetActivity : ComponentActivity() {
                 var index by rememberSaveable { mutableIntStateOf(0) }
                 var tx by remember { mutableStateOf<TransactionEntity?>(null) }
                 var knownPayee by remember { mutableStateOf(false) }
+                var mostUsed by remember { mutableStateOf(emptyList<Long>()) }
+                LaunchedEffect(Unit) { mostUsed = app.db.transactions().mostUsedCategories() }
                 LaunchedEffect(index) {
                     val loaded = app.db.transactions().byId(queue[index]) ?: run { finish(); return@LaunchedEffect }
                     knownPayee = app.ledger.knowsPayee(loaded.merchant)
@@ -71,6 +73,7 @@ class CategorySheetActivity : ComponentActivity() {
                             initialCategoryId = current.categoryId,
                             initialNote = current.note,
                             knownPayee = knownPayee,
+                            mostUsed = mostUsed,
                             progress = if (queue.size > 1) "${index + 1} of ${queue.size}" else null,
                             // Skip leaves the payment as it is: no category, no note, nothing learned.
                             onSkip = if (reviewing) ({
