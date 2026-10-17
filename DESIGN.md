@@ -86,6 +86,22 @@ A 4dp grid. Use `Spacing.xs` (4), `s` (8), `m` (12), `l` (16), `xl` (24), `xxl` 
 
 Spring based, from the Material 3 Expressive motion scheme. Use `Motion.fast` for small things (chip selection, button press), `Motion.default` for sheets and screen elements moving, and `Motion.effects` for fades and color changes. No tween durations in screens. Respect the system "remove animations" setting.
 
+A confirmation stays on screen for `Motion.CONFIRM_HOLD_MS` (350ms) before what it confirms closes: picking a category on the sheet shows a check mark in the chip, then the sheet files and slides away.
+
+## Haptics
+
+Haptics say what happened, never decorate. Use the tokens in `Haptics` through `LocalHapticFeedback`, which follows the system haptics setting and needs no permission.
+
+| Token | When |
+|---|---|
+| `Haptics.confirm` | Something was filed or saved |
+| `Haptics.tick` | A small choice changed: a chip picked while a note is open, a month changed |
+| `Haptics.reject` | An action could not complete |
+
+## Filing a payment
+
+On the category sheet one tap on a category files the payment. The app's guess is the first chip, labelled "Suggested". The note field sits behind an "Add note" chip. A Save button appears only while a note or a new category name is being typed, because then the tap is no longer the last step. A new category name can also be filed with the keyboard's Done key.
+
 ## Components
 
 Shared pieces in `ui/components/`. Build new screens from these and from Material 3 components.

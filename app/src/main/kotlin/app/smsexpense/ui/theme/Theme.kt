@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.unit.dp
 
 internal val AppShapes = Shapes(
@@ -37,6 +38,19 @@ object Motion {
     fun <T> fast(): SpringSpec<T> = spring(dampingRatio = 0.9f, stiffness = 1400f)
     fun <T> default(): SpringSpec<T> = spring(dampingRatio = 0.9f, stiffness = 700f)
     fun <T> effects(): SpringSpec<T> = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 1600f)
+
+    /** How long a confirmation (the check on a picked category) stays on screen before the sheet closes. */
+    const val CONFIRM_HOLD_MS = 350L
+}
+
+/** Haptic feedback by meaning, not by effect. Through LocalHapticFeedback, so the system haptics setting is respected. */
+object Haptics {
+    /** Something was filed or saved. */
+    val confirm = HapticFeedbackType.Confirm
+    /** A small choice changed: a chip picked, a month changed. */
+    val tick = HapticFeedbackType.SegmentTick
+    /** An action could not complete. */
+    val reject = HapticFeedbackType.Reject
 }
 
 private val LocalAppColors = staticCompositionLocalOf { LightAppColors }

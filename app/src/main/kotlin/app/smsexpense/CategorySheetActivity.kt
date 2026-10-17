@@ -57,7 +57,6 @@ class CategorySheetActivity : ComponentActivity() {
                         categories = categories,
                         initialCategoryId = current.categoryId,
                         initialNote = current.note,
-                        onCancel = { finish() },
                         onSave = { result ->
                             scope.launch {
                                 app.ledger.file(current.id, result.categoryId, result.newCategoryName, result.note)
