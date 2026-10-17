@@ -40,7 +40,13 @@ Brand color is a deep ledger green. Full role list is in `Color.kt`.
 - Credit: `credit` (`#1B7F3B` light, `#7BDA8F` dark), shown with a leading plus sign.
 - Color is never the only signal: the sign and the words "Paid" or "Received" always come with it.
 
-**Category colors**: eight fixed slots, assigned to categories in order and never cycled. A ninth category reuses a neutral color with its icon. Values are in `CategoryPalette`; they were taken from a palette checked for color blindness separation.
+**Category colors**: eight fixed slots, assigned to categories in order and never cycled. A ninth category reuses a neutral color with its icon. Values are in `AppColors.categories`; they were taken from a palette checked for color blindness separation.
+
+## Icons
+
+Material Symbols, **Rounded** family only, added as vector drawables in `res/drawable` (no icon library). Each built-in category has one (Food: restaurant, Groceries: shopping cart, and so on, mapped in `categoryIconRes`). A category the person creates shows its first letter instead, and a payment with no category shows a question mark on the tertiary container color.
+
+A category icon sits on a circle of the category's color, with the icon in ink or white, whichever has more contrast on that color. Sizes: 40dp at the start of a payment row, 24dp in chips and the spending breakdown. The icon is decorative: the category name next to it is what TalkBack reads.
 
 ## Type
 
@@ -85,7 +91,8 @@ Spring based, from the Material 3 Expressive motion scheme. Use `Motion.fast` fo
 Shared pieces in `ui/components/`. Build new screens from these and from Material 3 components.
 
 - `AmountText`: an amount with currency, sign and the right money color. Always use it for money.
-- `CategoryChip`: a category with its color dot. Selected and unselected states.
+- `CategoryIcon`: a category's icon (or letter) on a circle of its color.
+- `CategoryChip`: a category with its icon. Selected and unselected states.
 - `TransactionRow`: merchant, category, date and amount in one row.
 - `PrivacyNote`: the short "stays on this phone" line with a lock icon.
 

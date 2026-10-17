@@ -1,6 +1,7 @@
 package app.smsexpense.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,11 +22,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.smsexpense.R
 import app.smsexpense.core.Direction
 import app.smsexpense.ui.theme.AppTheme
 import app.smsexpense.ui.theme.Motion
@@ -69,10 +75,55 @@ fun AmountText(
 fun categoryColor(slot: Int): Color =
     AppTheme.colors.categories.getOrNull(slot) ?: AppTheme.colors.categoryFallback
 
-@Composable
-fun CategoryDot(slot: Int, modifier: Modifier = Modifier) {
-    Box(modifier.size(10.dp).background(categoryColor(slot), CircleShape))
+/** The Material Symbol for a built-in category, or null for one the person made. */
+@DrawableRes
+fun categoryIconRes(name: String): Int? = when (name) {
+    "Food" -> R.drawable.ic_restaurant
+    "Groceries" -> R.drawable.ic_shopping_cart
+    "Transport" -> R.drawable.ic_directions_bus
+    "Shopping" -> R.drawable.ic_shopping_bag
+    "Bills" -> R.drawable.ic_receipt_long
+    "Entertainment" -> R.drawable.ic_movie
+    "Health" -> R.drawable.ic_medical_services
+    "Travel" -> R.drawable.ic_flight
+    "EMI & loans" -> R.drawable.ic_account_balance
+    "Cash" -> R.drawable.ic_payments
+    "Salary" -> R.drawable.ic_work
+    "Transfers" -> R.drawable.ic_sync_alt
+    else -> null
 }
+
+/**
+ * A category at a glance: its icon on a circle of its colour. A category the person made shows its first letter,
+ * and a payment with no category shows a question mark. Decorative: the category name next to it is what TalkBack reads.
+ */
+@Composable
+fun CategoryIcon(name: String?, slot: Int, modifier: Modifier = Modifier, size: Dp = CategoryIconSize.row) {
+    val bg = if (name == null) MaterialTheme.colorScheme.tertiaryContainer else categoryColor(slot)
+    val fg = if (name == null) MaterialTheme.colorScheme.onTertiaryContainer else readableOn(bg)
+    Box(modifier.size(size).background(bg, CircleShape).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
+        val icon = name?.let(::categoryIconRes)
+        if (icon != null) {
+            Icon(painterResource(icon), contentDescription = null, tint = fg, modifier = Modifier.size(size * 0.55f))
+        } else {
+            Text(
+                name?.trim()?.firstOrNull()?.uppercase() ?: "?",
+                color = fg,
+                style = if (size >= CategoryIconSize.row) MaterialTheme.typography.titleMedium else MaterialTheme.typography.labelMedium,
+            )
+        }
+    }
+}
+
+object CategoryIconSize {
+    /** In chips and the spending breakdown. */
+    val small = 24.dp
+    /** At the start of a payment row. */
+    val row = 40.dp
+}
+
+/** Ink or white, whichever reads better on this colour (WCAG contrast, the two meet at about 0.18 luminance). */
+private fun readableOn(bg: Color): Color = if (bg.luminance() > 0.18f) Color(0xFF171D1A) else Color.White
 
 @Composable
 fun CategoryChip(name: String, slot: Int, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -84,7 +135,7 @@ fun CategoryChip(name: String, slot: Int, selected: Boolean, onClick: () -> Unit
         selected = selected,
         onClick = onClick,
         label = { Text(name) },
-        leadingIcon = { CategoryDot(slot) },
+        leadingIcon = { CategoryIcon(name, slot, size = CategoryIconSize.small) },
         shape = CircleShape,
         colors = FilterChipDefaults.filterChipColors(containerColor = container, selectedContainerColor = container),
         modifier = modifier.heightIn(min = 48.dp),
@@ -107,7 +158,7 @@ fun TransactionRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
-        CategoryDot(categorySlot)
+        CategoryIcon(category, categorySlot)
         Column(Modifier.weight(1f)) {
             Text(merchant, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(

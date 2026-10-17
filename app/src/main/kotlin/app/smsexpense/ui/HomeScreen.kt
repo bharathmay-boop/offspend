@@ -32,7 +32,8 @@ import app.smsexpense.core.Direction
 import app.smsexpense.data.CategoryEntity
 import app.smsexpense.data.TransactionEntity
 import app.smsexpense.ui.components.AmountText
-import app.smsexpense.ui.components.CategoryDot
+import app.smsexpense.ui.components.CategoryIcon
+import app.smsexpense.ui.components.CategoryIconSize
 import app.smsexpense.ui.components.PrivacyNote
 import app.smsexpense.ui.components.TransactionRow
 import app.smsexpense.ui.components.categoryColor
@@ -148,19 +149,19 @@ private fun CurrencyBlock(s: CurrencyMonth, slotOf: Map<String, Int>) {
             s.spentByCategory.forEach { c ->
                 val slot = c.category?.let { slotOf[it] } ?: -1
                 val share = if (largest == null || largest.signum() == 0) 0f else c.amount.toFloat() / largest.toFloat()
-                CategoryBar(c.category ?: "Needs a category", slot, share, formatMoney(c.amount, s.currency))
+                CategoryBar(c.category, slot, share, formatMoney(c.amount, s.currency))
             }
         }
     }
 }
 
 @Composable
-private fun CategoryBar(name: String, slot: Int, share: Float, amount: String) {
+private fun CategoryBar(category: String?, slot: Int, share: Float, amount: String) {
     val width by animateFloatAsState(share.coerceIn(0.02f, 1f), animationSpec = Motion.default(), label = "bar")
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.semantics(mergeDescendants = true) {}) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            CategoryDot(slot)
-            Text(name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            CategoryIcon(category, slot, size = CategoryIconSize.small)
+            Text(category ?: "Needs a category", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             Text(amount, style = AppTheme.type.amountRow)
         }
         Box(Modifier.fillMaxWidth().height(6.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)) {
