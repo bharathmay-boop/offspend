@@ -121,14 +121,23 @@ fun AddSheet(
     var selected by rememberSaveable { mutableStateOf<Long?>(null) }
     var filing by rememberSaveable { mutableStateOf<Long?>(null) }
     var amountError by rememberSaveable { mutableStateOf(false) }
+    var saved by rememberSaveable { mutableStateOf(false) }
     var pickingDate by remember { mutableStateOf(false) }
     var pickingCurrency by remember { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
     val focus = remember { FocusRequester() }
     val amount = parseAmount(amountText)
     val suggested = payee.trim().takeIf { it.isNotEmpty() }?.let { guess(it, direction) }
+    // Saves once. The amount is checked again here, since it can be cleared during the pause after a category tap.
     val save by rememberUpdatedState {
-        onSave(AddResult(direction, amount!!, currency, payee.trim().ifEmpty { null }, selected, date, note.trim()))
+        val a = amount
+        if (a == null) {
+            filing = null
+            amountError = true
+        } else if (!saved) {
+            saved = true
+            onSave(AddResult(direction, a, currency, payee.trim().ifEmpty { null }, selected, date, note.trim()))
+        }
     }
 
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }

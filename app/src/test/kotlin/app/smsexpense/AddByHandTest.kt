@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
 import androidx.room.Room
@@ -43,6 +44,7 @@ import java.util.Locale
 class AddByHandTest {
     @get:Rule val compose = createComposeRule()
     private var saved: AddResult? = null
+    private var saves = 0
     private val today = LocalDate.of(2026, 10, 13)
     private val categories = listOf(CategoryEntity(1, "Food", 0), CategoryEntity(2, "Groceries", 1))
 
@@ -52,7 +54,7 @@ class AddByHandTest {
                 AddSheet(
                     categories = categories, currencies = listOf("INR", "USD"), defaultCurrency = "INR",
                     payees = listOf("Swiggy", "Sharma Kirana"), guess = { name, _ -> if (name == "Swiggy") 1L else null },
-                    today = today, onSave = { saved = it },
+                    today = today, onSave = { saved = it; saves++ },
                 )
             }
         }
@@ -115,6 +117,28 @@ class AddByHandTest {
         fileUnder("Food")
         assertNull(saved)
         compose.onNodeWithText("Enter an amount above zero").assertExists()
+    }
+
+    // Graphite on #147: the amount can still be edited during the pause after a category tap.
+    @Test fun clearingTheAmountDuringThePauseSavesNothingAndSaysWhy() {
+        sheet()
+        compose.onNodeWithTag("amount").performTextInput("50")
+        compose.onNodeWithText("Food").performScrollTo().performClick()
+        compose.onNodeWithTag("amount").performTextClearance()
+        compose.mainClock.advanceTimeBy(Motion.CONFIRM_HOLD_MS + 100)
+        compose.waitForIdle()
+        assertNull(saved)
+        compose.onNodeWithText("Enter an amount above zero").assertExists()
+    }
+
+    @Test fun tappingSaveTwiceSavesOnce() {
+        sheet()
+        compose.onNodeWithTag("amount").performTextInput("50")
+        compose.onNodeWithText("Add note").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performClick()
+        compose.waitForIdle()
+        assertEquals(1, saves)
     }
 
     @Test fun aKnownPayeeIsSuggestedAndPicksItsCategory() {
