@@ -37,6 +37,13 @@ class PaymentListTest {
         assertEquals("IRCTC Tickets", displayMerchant("IRCTC TICKETS"))
         assertEquals("KFC", displayMerchant("KFC"))
         assertEquals("The Belgian Waffle", displayMerchant("THE BELGIAN WAFFLE"))
+        // Graphite on #138: short words are words unless they're known or unpronounceable short forms.
+        assertEquals("Sri Krishna Sweets", displayMerchant("SRI KRISHNA SWEETS"))
+        assertEquals("Ram Medicals", displayMerchant("RAM MEDICALS"))
+        assertEquals("Acme Technologies Pvt Ltd", displayMerchant("ACME TECHNOLOGIES PVT LTD"))
+        assertEquals("H&M", displayMerchant("H&M"))
+        assertEquals("PVR Cinemas", displayMerchant("PVR CINEMAS"))
+        assertEquals("SBI Card", displayMerchant("SBI CARD"))
         // Already mixed case: the bank or the person wrote it that way, so leave it.
         assertEquals("McDonald's", displayMerchant("McDonald's"))
         assertEquals("swiggy@icici", displayMerchant("swiggy@icici"))

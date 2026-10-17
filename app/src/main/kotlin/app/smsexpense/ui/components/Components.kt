@@ -212,8 +212,9 @@ fun dayLabel(day: LocalDate, today: LocalDate, locale: Locale = Locale.getDefaul
 
 /**
  * Banks write payees in capitals (SWIGGY, BLUE TOKAI). Shown as people write them: Swiggy, Blue Tokai.
- * Short forms stay in capitals (KFC, IRCTC). A name that is already mixed case, or has no spaces and odd characters
- * like a UPI id, is left as it is. Only for display; the stored name never changes.
+ * Short forms stay in capitals: known ones (IRCTC, SBI), short words with no vowel (KFC, PVR) and short names joined
+ * by & (H&M). Every other word is a word (Sri, Ram, Pvt). A name that is already mixed case, or has no spaces and
+ * odd characters like a UPI id, is left as it is. Only for display; the stored name never changes.
  */
 fun displayMerchant(raw: String): String {
     if (raw.any { it.isLowerCase() }) return raw
@@ -221,15 +222,20 @@ fun displayMerchant(raw: String): String {
         when {
             word.isEmpty() -> word
             word in SHORT_FORMS -> word
-            word.length <= 3 && word !in SMALL_WORDS && word.all { it.isLetter() } -> word
+            // ponytail: vowel test for unknown short forms; add to SHORT_FORMS when one with a vowel shows up wrong
+            word.length <= 3 && word !in COMPANY_WORDS && word.all { it.isLetter() } && word.none { it in "AEIOUY" } -> word
+            word.length <= 3 && '&' in word -> word
             !word.all { it.isLetter() || it == '\'' || it == '&' || it == '-' } -> word
             else -> word.lowercase().replaceFirstChar { it.titlecase(Locale.ROOT) }
         }
     }
 }
 
-private val SHORT_FORMS = setOf("IRCTC", "HDFC", "ICICI", "BSNL", "IOCL", "BPCL", "HPCL", "NEFT", "IMPS", "RTGS", "UPI", "EMI", "ATM")
-private val SMALL_WORDS = setOf("THE", "AND", "OF", "FOR", "TO", "BY", "AT", "IN", "ON", "PAY", "BAR", "CAB", "BUS", "CAR", "TEA", "ONE", "NEW", "BIG", "MY")
+private val SHORT_FORMS = setOf(
+    "IRCTC", "HDFC", "ICICI", "BSNL", "IOCL", "BPCL", "HPCL", "NEFT", "IMPS", "RTGS", "UPI", "EMI", "ATM",
+    "SBI", "PNB", "BOB", "IDBI", "LIC", "ITC", "IOC", "IGL", "MTNL", "TVS", "MRF", "DLF", "ACT",
+)
+private val COMPANY_WORDS = setOf("PVT", "LTD", "LLP")
 
 @Composable
 fun PrivacyNote(modifier: Modifier = Modifier) {
