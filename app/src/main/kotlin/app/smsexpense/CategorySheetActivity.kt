@@ -22,6 +22,8 @@ import androidx.compose.runtime.setValue
 import app.smsexpense.capture.TransactionNotifier
 import app.smsexpense.data.TransactionEntity
 import app.smsexpense.ui.CategorySheet
+import app.smsexpense.ui.Provenance
+import app.smsexpense.ui.SourceLine
 import app.smsexpense.ui.theme.ExpenseTheme
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -45,11 +47,13 @@ class CategorySheetActivity : ComponentActivity() {
                 var index by rememberSaveable { mutableIntStateOf(0) }
                 var tx by remember { mutableStateOf<TransactionEntity?>(null) }
                 var knownPayee by remember { mutableStateOf(false) }
+                var sources by remember { mutableStateOf(emptyList<SourceLine>()) }
                 var mostUsed by remember { mutableStateOf(emptyList<Long>()) }
                 LaunchedEffect(Unit) { mostUsed = app.db.transactions().mostUsedCategories() }
                 LaunchedEffect(index) {
                     val loaded = app.db.transactions().byId(queue[index]) ?: run { finish(); return@LaunchedEffect }
                     knownPayee = app.ledger.knowsPayee(loaded.merchant)
+                    sources = Provenance.lines(loaded.source, app.db.sightings().forTransaction(loaded.id), appName = ::appName)
                     tx = loaded
                 }
                 val categories by app.db.categories().observeAll().collectAsState(initial = emptyList())
@@ -74,6 +78,7 @@ class CategorySheetActivity : ComponentActivity() {
                             initialNote = current.note,
                             knownPayee = knownPayee,
                             mostUsed = mostUsed,
+                            sources = sources,
                             progress = if (queue.size > 1) "${index + 1} of ${queue.size}" else null,
                             // Skip leaves the payment as it is: no category, no note, nothing learned.
                             onSkip = if (reviewing) ({
@@ -119,6 +124,10 @@ class CategorySheetActivity : ComponentActivity() {
             }
         }
     }
+
+    // Android 11+ hides other apps' names unless declared, so a known list in Provenance is the fallback.
+    private fun appName(pkg: String): String? =
+        runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrNull()
 
     companion object {
         private const val EXTRA_QUEUE = "app.smsexpense.QUEUE"

@@ -66,7 +66,8 @@ class Ledger(
             ),
         )
         if (id == -1L) return null
-        db.sightings().insert(seen(id))
+        // "Yes, same" needs no tap, so the bank's sighting confirms the hand-added payment until the person says otherwise (#171).
+        db.sightings().insert(seen(handAdded?.id ?: id))
         if (handAdded != null) {
             // Matched once only, and it gains the account the bank named.
             db.transactions().update(
@@ -219,6 +220,13 @@ class Ledger(
     suspend fun delete(transactionId: Long) = db.transactions().setDeleted(transactionId, true)
 
     suspend fun restore(transactionId: Long) = db.transactions().setDeleted(transactionId, false)
+
+    /** "No, add it" on the same-payment question: the bank's copy becomes its own payment and takes its sighting back. */
+    suspend fun keepSeparate(bankCopyId: Long) {
+        val bank = db.transactions().byId(bankCopyId) ?: return
+        restore(bankCopyId)
+        db.sightings().moveTo(bank.fingerprint, bankCopyId)
+    }
 
     suspend fun setNote(transactionId: Long, note: String?) =
         db.transactions().setNote(transactionId, note?.trim()?.takeIf { it.isNotEmpty() })

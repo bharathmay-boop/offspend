@@ -34,7 +34,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 TransactionNotifier.ACTION_SAME -> TransactionNotifier.dismiss(app, txId)
                 TransactionNotifier.ACTION_SEPARATE -> {
                     // Not the same payment: show the bank's copy and ask for its category like any new payment.
-                    app.ledger.restore(txId)
+                    app.ledger.keepSeparate(txId)
                     app.db.transactions().byId(txId)?.let { app.showPayment(it) }
                 }
                 TransactionNotifier.ACTION_NOTE -> {
