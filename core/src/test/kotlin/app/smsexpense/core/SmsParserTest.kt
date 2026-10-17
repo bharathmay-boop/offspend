@@ -42,4 +42,17 @@ class SmsParserTest {
             assertEquals(word, 0, BigDecimal(250).compareTo(got.money.amount))
         }
     }
+
+    // #154: the letter check is for currency words; a symbol right after a word is still money.
+    @Test fun aSymbolStraightAfterAWordIsStillTheAmount() {
+        for ((text, amount, currency) in listOf(
+            Triple("Paid₹250 to SWIGGY from a/c XX1234", 250, "INR"),
+            Triple("Your card was debited$50 at AMAZON", 50, "USD"),
+            Triple("A purchase of€20 was made on your card at IKEA", 20, "EUR"),
+        )) {
+            val got = SmsParser.parse(Source.SMS, "AD-HDFCBK", text) as SmsReading.Transaction
+            assertEquals(text, 0, BigDecimal(amount).compareTo(got.money.amount))
+            assertEquals(text, currency, got.money.currency)
+        }
+    }
 }

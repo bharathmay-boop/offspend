@@ -27,8 +27,9 @@ object SmsParser {
     private fun r(p: String) = Regex(p, RegexOption.IGNORE_CASE)
 
     private const val NUMBER = """(\d{1,3}(?:,\d{2,3})+|\d+)(?:\.(\d{1,2}))?"""
-    private val currencyToken = """(Rs\.?|INR|₹|USD|US\$|\$|AED|GBP|£|EUR|€|PKR|NGN|Ksh|KES)"""
-    private val moneyWithCurrency = r("""(?<![A-Za-z])$currencyToken\s?$NUMBER""")
+    // Currency words can't follow a letter ("hrs 30" is not Rs 30, #31); symbols can ("Paid₹250", #154).
+    private val currencyToken = """((?<![A-Za-z])(?:Rs\.?|INR|USD|US\$|AED|GBP|EUR|PKR|NGN|Ksh|KES)|₹|\$|£|€)"""
+    private val moneyWithCurrency = r("""$currencyToken\s?$NUMBER""")
     private val bareAmountAfterVerb = r("""\b(?:debited|credited) by\s+$NUMBER""")
     private val notTheAmount = r("""(bal|balance|limit|lmt|due)[^\d]{0,12}$""")
 
