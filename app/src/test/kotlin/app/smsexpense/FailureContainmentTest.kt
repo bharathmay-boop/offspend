@@ -1,6 +1,7 @@
 package app.smsexpense
 
 import androidx.test.core.app.ApplicationProvider
+import app.smsexpense.capture.InboxMessage
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -24,6 +25,20 @@ class FailureContainmentTest {
         // Not marked done, so a later launch reads the inbox again.
         app.importHistory { emptyList() }
         assertEquals(ExpenseApp.History.Done(0), app.history.value)
+    }
+
+    // Graphite on #129: the permission callback and the home screen both start the import, so the claim must be
+    // taken before the call returns, or both run and the second can replace "Filed 12 payments" with 0.
+    @Test fun startingTheImportTwiceReadsTheInboxOnce() {
+        val reads = java.util.concurrent.atomic.AtomicInteger()
+        val release = java.util.concurrent.CountDownLatch(1)
+        val inbox: (Long) -> List<InboxMessage> = { reads.incrementAndGet(); release.await(); emptyList() }
+        app.importHistoryOnce(inbox)
+        assertEquals(ExpenseApp.History.Reading, app.history.value)
+        app.importHistoryOnce(inbox)
+        release.countDown()
+        Thread.sleep(500)
+        assertEquals(1, reads.get())
     }
 
     @Test fun oneMessageThatFailsDoesNotStopTheOthers() = runTest {

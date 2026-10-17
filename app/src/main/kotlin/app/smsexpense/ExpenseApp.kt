@@ -40,12 +40,24 @@ class ExpenseApp : Application() {
 
     /** On first setup, files the last 90 days of bank messages so the first screen already has history. */
     fun importHistoryOnce(readInbox: (Long) -> List<InboxMessage> = InboxImporter.systemInbox(this)) {
-        scope.launch { importHistory(readInbox) }
+        // Claimed before returning: the permission callback and the home screen can both call this at once.
+        if (claimHistory()) scope.launch { readHistory(readInbox) }
     }
 
     internal suspend fun importHistory(readInbox: (Long) -> List<InboxMessage>) {
-        if (prefs.getBoolean(KEY_HISTORY_DONE, false) || _history.value == History.Reading) return
-        _history.value = History.Reading
+        if (claimHistory()) readHistory(readInbox)
+    }
+
+    private fun claimHistory(): Boolean {
+        if (prefs.getBoolean(KEY_HISTORY_DONE, false)) return false
+        while (true) {
+            val now = _history.value
+            if (now == History.Reading) return false
+            if (_history.compareAndSet(now, History.Reading)) return true
+        }
+    }
+
+    private suspend fun readHistory(readInbox: (Long) -> List<InboxMessage>) {
         try {
             val since = System.currentTimeMillis() - InboxImporter.HISTORY_DAYS * 24 * 60 * 60 * 1000
             val found = InboxImporter(readInbox) { s, from, body, at -> onMessage(s, from, body, at, notify = false) }.importSince(since)
