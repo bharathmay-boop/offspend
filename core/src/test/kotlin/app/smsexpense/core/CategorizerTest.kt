@@ -31,6 +31,13 @@ class CategorizerTest {
         assertNull(Categorizer.guess("ACME TECHNOLOGIES PVT LTD", Direction.DEBIT, emptyMap()))
     }
 
+    // #153: "india" is stripped from payee keys, which used to turn "Air India" into "air".
+    @Test fun keywordsContainingASuffixWordStillMatch() {
+        assertEquals("Travel", Categorizer.guess("AIR INDIA LTD", Direction.DEBIT, emptyMap()))
+        assertEquals("Transport", Categorizer.guess("INDIAN OIL CORPORATION", Direction.DEBIT, emptyMap()))
+        assertEquals(Categorizer.merchantKey("XYZ India Pvt Ltd"), Categorizer.merchantKey("XYZ"))
+    }
+
     @Test fun guessesForTheTestSetMerchants() {
         val guessed = Fixtures.all.filter { it.expected.is_transaction }.count {
             Categorizer.guess(it.expected.merchant, Direction.valueOf(it.expected.direction!!), emptyMap()) != null

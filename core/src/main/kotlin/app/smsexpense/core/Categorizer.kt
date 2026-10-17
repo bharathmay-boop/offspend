@@ -12,12 +12,14 @@ val DefaultCategories = listOf(
 object Categorizer {
     /** "swiggy.instamart@icici" and "SWIGGY INSTAMART" both become "swiggy instamart". */
     fun merchantKey(merchant: String): String =
-        merchant.substringBefore('@')
-            .lowercase()
-            .replace(Regex("[^a-z0-9]+"), " ")
+        plain(merchant)
             .replace(Regex("\\b(pvt|ltd|private|limited|india|inc|llp)\\b"), " ")
             .trim()
             .replace(Regex("\\s+"), " ")
+
+    // Keywords match before the suffixes are stripped, or "Air India" would become "air" (#153).
+    private fun plain(merchant: String): String =
+        merchant.substringBefore('@').lowercase().replace(Regex("[^a-z0-9]+"), " ")
 
     // ponytail: keyword list, swap for the on-device model (#14) when this stops being enough
     private val keywords: List<Pair<Regex, String>> = listOf(
@@ -42,7 +44,7 @@ object Categorizer {
         if (merchant == null) return null
         val key = merchantKey(merchant)
         learned[key]?.let { return it }
-        val hit = keywords.firstOrNull { (regex, _) -> regex.containsMatchIn(key) }?.second ?: return null
+        val hit = keywords.firstOrNull { (regex, _) -> regex.containsMatchIn(plain(merchant)) }?.second ?: return null
         // A keyword like "salary" only makes sense for money coming in, and spending ones only for money going out.
         val creditOnly = hit == "Salary"
         return if (creditOnly == (direction == Direction.CREDIT)) hit else null
