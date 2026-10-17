@@ -3,6 +3,10 @@ package app.smsexpense.data
 import app.smsexpense.core.Categorizer
 import app.smsexpense.core.DefaultCategories
 import app.smsexpense.core.Direction
+import app.smsexpense.core.SmsParser
+import app.smsexpense.core.SmsReading
+import app.smsexpense.core.Source
+import java.security.MessageDigest
 
 /** The app's operations on stored money, in one place so screens and receivers share them. */
 class Ledger(private val db: AppDatabase) {
@@ -11,6 +15,35 @@ class Ledger(private val db: AppDatabase) {
         if (db.categories().all().isNotEmpty()) return
         DefaultCategories.forEachIndexed { slot, name -> db.categories().insert(CategoryEntity(name = name, slot = slot)) }
     }
+
+    /**
+     * Reads one message and, if it is a transaction, saves it with a suggested category.
+     * @return the new transaction's id, or null when the message was ignored or already saved.
+     */
+    suspend fun record(source: Source, sender: String, body: String, receivedAt: Long): Long? {
+        val reading = SmsParser.parse(source, sender, body) as? SmsReading.Transaction ?: return null
+        val guess = guessCategory(reading.merchant, reading.direction)
+        val id = db.transactions().insert(
+            TransactionEntity(
+                direction = reading.direction,
+                amount = reading.money.amount,
+                currency = reading.money.currency,
+                merchant = reading.merchant,
+                accountLast4 = reading.account,
+                occurredAt = receivedAt,
+                categoryId = guess?.id,
+                note = null,
+                source = source.name,
+                fingerprint = fingerprint(source, sender, body, receivedAt),
+            ),
+        )
+        return id.takeIf { it != -1L }
+    }
+
+    private fun fingerprint(source: Source, sender: String, body: String, receivedAt: Long): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest("$source|$sender|$receivedAt|$body".toByteArray())
+            .joinToString("") { "%02x".format(it) }
 
     /** The category the app would suggest for this merchant, or null. */
     suspend fun guessCategory(merchant: String?, direction: Direction): CategoryEntity? {
