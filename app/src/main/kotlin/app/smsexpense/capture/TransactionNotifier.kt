@@ -86,22 +86,30 @@ object TransactionNotifier {
         )
 
         NotificationManagerCompat.from(context).notify(tx.id.toInt(), builder.build())
-        updateSummary(context)
+        updateSummary(context, posted = tx.id.toInt())
     }
 
     fun dismiss(context: Context, txId: Long) {
         NotificationManagerCompat.from(context).cancel(txId.toInt())
-        updateSummary(context)
+        updateSummary(context, removed = txId.toInt())
     }
+
+    /**
+     * Payments in the tray. Android posts and cancels in the background, so the tray may not show the call just made
+     * yet; that one is counted from what we did, not from the tray.
+     */
+    internal fun waiting(shown: Set<Int>, posted: Int? = null, removed: Int? = null): Int =
+        (shown + listOfNotNull(posted) - setOfNotNull(removed)).size
 
     /**
      * With two or more payments waiting, a silent summary holds the group together, so each new payment still pops up
      * on its own. With fewer, there is nothing to group and the summary goes.
      */
-    private fun updateSummary(context: Context) {
+    private fun updateSummary(context: Context, posted: Int? = null, removed: Int? = null) {
         val manager = NotificationManagerCompat.from(context)
-        val waiting = context.getSystemService(NotificationManager::class.java).activeNotifications
-            .count { it.notification.group == GROUP && it.id != SUMMARY_ID }
+        val shown = context.getSystemService(NotificationManager::class.java).activeNotifications
+            .filter { it.notification.group == GROUP && it.id != SUMMARY_ID }.map { it.id }.toSet()
+        val waiting = waiting(shown, posted, removed)
         if (waiting < 2) {
             manager.cancel(SUMMARY_ID)
             return

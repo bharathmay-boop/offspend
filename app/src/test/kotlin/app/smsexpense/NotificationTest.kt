@@ -111,4 +111,11 @@ class NotificationTest {
         TransactionNotifier.dismiss(app, b)
         assertTrue(notifications.isEmpty())
     }
+
+    // Graphite on #144: Android posts and cancels in the background, so the tray can lag behind the call just made.
+    @Test fun theCountIncludesThePaymentJustPostedAndNotTheOneJustRemoved() {
+        assertEquals(2, TransactionNotifier.waiting(shown = setOf(1), posted = 2))
+        assertEquals(1, TransactionNotifier.waiting(shown = setOf(1, 2), removed = 2))
+        assertEquals(2, TransactionNotifier.waiting(shown = setOf(1, 2), posted = 2))
+    }
 }
