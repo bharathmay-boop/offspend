@@ -2,6 +2,7 @@ package app.smsexpense
 
 import android.app.Application
 import app.smsexpense.capture.InboxImporter
+import app.smsexpense.capture.InboxMessage
 import app.smsexpense.capture.TransactionNotifier
 import app.smsexpense.core.Source
 import app.smsexpense.data.AppDatabase
@@ -39,10 +40,32 @@ class ExpenseApp : Application() {
             val found = InboxImporter(InboxImporter.systemInbox(this@ExpenseApp)) { s, from, body, at ->
                 onMessage(s, from, body, at, notify = false)
             }.importSince(since)
-            prefs.edit().putBoolean(KEY_HISTORY_DONE, true).apply()
+            prefs.edit().putBoolean(KEY_HISTORY_DONE, true).putLong(KEY_LAST_SEEN, System.currentTimeMillis()).apply()
             _history.value = History.Done(found)
         }
     }
+
+    /**
+     * Some phones stop background apps, so an SMS can arrive without the app seeing it.
+     * Each time the app opens, file anything that arrived since the last message it saw.
+     * @return how many missed payments were filed.
+     */
+    suspend fun catchUp(readInbox: (Long) -> List<InboxMessage> = InboxImporter.systemInbox(this)): Int {
+        if (!prefs.getBoolean(KEY_HISTORY_DONE, false)) return 0
+        // Overlap by a minute; the fingerprint stops anything already saved from being saved twice.
+        val since = prefs.getLong(KEY_LAST_SEEN, 0L) - 60_000
+        val messages = readInbox(since)
+        val found = InboxImporter({ messages }) { s, from, body, at -> onMessage(s, from, body, at, notify = false) }.importSince(since)
+        messages.maxOfOrNull { it.receivedAt }?.let { markSeen(it) }
+        return found
+    }
+
+    private fun markSeen(receivedAt: Long) {
+        if (receivedAt > prefs.getLong(KEY_LAST_SEEN, 0L)) prefs.edit().putLong(KEY_LAST_SEEN, receivedAt).apply()
+    }
+
+    /** For tests: start as if setup already finished at this time. */
+    internal fun markHistoryDone(at: Long) = prefs.edit().putBoolean(KEY_HISTORY_DONE, true).putLong(KEY_LAST_SEEN, at).apply()
 
     override fun onCreate() {
         super.onCreate()
@@ -62,5 +85,6 @@ class ExpenseApp : Application() {
 
     private companion object {
         const val KEY_HISTORY_DONE = "history_done"
+        const val KEY_LAST_SEEN = "last_seen_sms"
     }
 }
