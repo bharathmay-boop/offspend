@@ -32,6 +32,9 @@ class TransactionFilterTest {
             IgnoreReason.FAILED,
             TransactionFilter.check(Source.SMS, "AD-HDFCBK", "Your payment of Rs 500 failed. Any amount debited will be refunded in 5 days"),
         )
+        for (promise in listOf("will be refunded to your A/c", "will be reversed to your account", "shall be refunded to your A/c")) {
+            assertEquals(promise, IgnoreReason.FAILED, TransactionFilter.check(Source.SMS, "AD-HDFCBK", "UPI txn of Rs 500 failed. Amount $promise in 3 days"))
+        }
     }
 
     @Test fun aRefundCreditedAfterAFailedPaymentIsStillMoney() {

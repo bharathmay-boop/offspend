@@ -11,8 +11,8 @@ object TransactionFilter {
     private val personalSender = Regex("""^\+?\d{10,}$|^\+\d+X+$""")
 
     private val otp = r("""\bOTP\b|one[- ]time password|verification code""")
-    // Money that already came back. "Refund will be processed" is only a promise, so it doesn't count (#152).
-    private val reversedCredit = r("""(has been|have been) (reversed|refunded)|(reversed|refunded) to your""")
+    // Money that already came back. "Refund will be processed" or "will be refunded to your" is only a promise (#152).
+    private val reversedCredit = r("""(has been|have been) (reversed|refunded)|(?<!will be |shall be |would be )(reversed|refunded) to your""")
     private val failed = r("""\b(failed|declined|unsuccessful|could not be completed)\b""")
     private val upcoming = r("""will be (debited|charged|deducted)|autopay mandate|mandate .*\b(created|registered)\b""")
     private val request = r("""has requested|\brequested (rs|inr|₹)|collect request""")
