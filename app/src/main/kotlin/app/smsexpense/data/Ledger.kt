@@ -22,6 +22,11 @@ class Ledger(private val db: AppDatabase) {
      */
     suspend fun record(source: Source, sender: String, body: String, receivedAt: Long): Long? {
         val reading = SmsParser.parse(source, sender, body) as? SmsReading.Transaction ?: return null
+        sameTransactionFromOtherSource(reading, source, receivedAt)?.let { twin ->
+            // Keep the first one; if it had no payee and this one names it, fill it in.
+            reading.merchant?.let { db.transactions().fillMerchant(twin.id, it) }
+            return null
+        }
         val guess = guessCategory(reading.merchant, reading.direction)
         val id = db.transactions().insert(
             TransactionEntity(
@@ -39,6 +44,16 @@ class Ledger(private val db: AppDatabase) {
         )
         return id.takeIf { it != -1L }
     }
+
+    /**
+     * The bank SMS and the payment app's notification often both report one payment.
+     * Same direction, amount and currency from the other source within ten minutes counts as the same payment.
+     */
+    // ponytail: two genuine equal payments minutes apart, one seen by SMS and one by notification, would merge; pair rows explicitly if that shows up
+    private suspend fun sameTransactionFromOtherSource(reading: SmsReading.Transaction, source: Source, at: Long): TransactionEntity? =
+        db.transactions()
+            .fromOtherSourcesNear(reading.direction, reading.money.currency, source.name, at - TWIN_WINDOW_MS, at + TWIN_WINDOW_MS)
+            .firstOrNull { it.amount.compareTo(reading.money.amount) == 0 }
 
     private fun fingerprint(source: Source, sender: String, body: String, receivedAt: Long): String =
         MessageDigest.getInstance("SHA-256")
@@ -78,4 +93,8 @@ class Ledger(private val db: AppDatabase) {
 
     suspend fun setNote(transactionId: Long, note: String?) =
         db.transactions().setNote(transactionId, note?.trim()?.takeIf { it.isNotEmpty() })
+
+    private companion object {
+        const val TWIN_WINDOW_MS = 10 * 60 * 1000L
+    }
 }

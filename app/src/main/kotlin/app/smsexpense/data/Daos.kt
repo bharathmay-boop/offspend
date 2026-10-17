@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
+import app.smsexpense.core.Direction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -21,6 +22,15 @@ interface TransactionDao {
 
     @Query("UPDATE transactions SET categoryId = :categoryId, confirmed = 1 WHERE id = :id")
     suspend fun setCategory(id: Long, categoryId: Long)
+
+    @Query(
+        "SELECT * FROM transactions WHERE direction = :direction AND currency = :currency " +
+            "AND source != :source AND occurredAt BETWEEN :from AND :to",
+    )
+    suspend fun fromOtherSourcesNear(direction: Direction, currency: String, source: String, from: Long, to: Long): List<TransactionEntity>
+
+    @Query("UPDATE transactions SET merchant = :merchant WHERE id = :id AND merchant IS NULL")
+    suspend fun fillMerchant(id: Long, merchant: String)
 
     @Query("UPDATE transactions SET note = :note WHERE id = :id")
     suspend fun setNote(id: Long, note: String?)
