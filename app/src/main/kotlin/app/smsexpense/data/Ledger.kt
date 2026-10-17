@@ -133,6 +133,26 @@ class Ledger(
         return id
     }
 
+    /**
+     * Saves changes from the edit sheet (#52). An entry the person typed in changes in full. One read from a bank SMS or
+     * notification keeps the amount, currency and direction the bank sent, so the record never drifts from it.
+     */
+    suspend fun edit(transactionId: Long, r: AddResult, zone: ZoneId = ZoneId.systemDefault()) {
+        val tx = db.transactions().byId(transactionId) ?: return
+        val oldDay = Instant.ofEpochMilli(tx.occurredAt).atZone(zone).toLocalDate()
+        val at = if (r.date == oldDay) tx.occurredAt else r.date.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
+        val common = tx.copy(merchant = r.payee, occurredAt = at, note = r.note.ifBlank { null })
+        db.transactions().update(
+            if (tx.source == MANUAL) common.copy(direction = r.direction, amount = r.amount, currency = r.currency) else common,
+        )
+        r.categoryId?.let { setCategory(transactionId, it) }
+    }
+
+    /** Hides an entry. It stays in the database so a catch-up never files the same message again. */
+    suspend fun delete(transactionId: Long) = db.transactions().setDeleted(transactionId, true)
+
+    suspend fun restore(transactionId: Long) = db.transactions().setDeleted(transactionId, false)
+
     suspend fun setNote(transactionId: Long, note: String?) =
         db.transactions().setNote(transactionId, note?.trim()?.takeIf { it.isNotEmpty() })
 

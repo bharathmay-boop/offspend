@@ -110,15 +110,19 @@ fun AddSheet(
     guess: (String, Direction) -> Long?,
     today: LocalDate,
     onSave: (AddResult) -> Unit,
+    /** Editing an entry (#52): its current values. */
+    initial: AddResult? = null,
+    /** For an entry read from the bank: the amount, currency and direction can't change. */
+    moneyLocked: Boolean = false,
 ) {
-    var direction by rememberSaveable { mutableStateOf(Direction.DEBIT) }
-    var amountText by rememberSaveable { mutableStateOf("") }
-    var currency by rememberSaveable { mutableStateOf(defaultCurrency) }
-    var payee by rememberSaveable { mutableStateOf("") }
-    var date by rememberSaveable { mutableStateOf(today) }
-    var note by rememberSaveable { mutableStateOf("") }
-    var noting by rememberSaveable { mutableStateOf(false) }
-    var selected by rememberSaveable { mutableStateOf<Long?>(null) }
+    var direction by rememberSaveable { mutableStateOf(initial?.direction ?: Direction.DEBIT) }
+    var amountText by rememberSaveable { mutableStateOf(initial?.amount?.stripTrailingZeros()?.toPlainString().orEmpty()) }
+    var currency by rememberSaveable { mutableStateOf(initial?.currency ?: defaultCurrency) }
+    var payee by rememberSaveable { mutableStateOf(initial?.payee.orEmpty()) }
+    var date by rememberSaveable { mutableStateOf(initial?.date ?: today) }
+    var note by rememberSaveable { mutableStateOf(initial?.note.orEmpty()) }
+    var noting by rememberSaveable { mutableStateOf(!initial?.note.isNullOrBlank()) }
+    var selected by rememberSaveable { mutableStateOf(initial?.categoryId) }
     var filing by rememberSaveable { mutableStateOf<Long?>(null) }
     var amountError by rememberSaveable { mutableStateOf(false) }
     var saved by rememberSaveable { mutableStateOf(false) }
@@ -140,7 +144,7 @@ fun AddSheet(
         }
     }
 
-    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    LaunchedEffect(Unit) { if (initial == null) runCatching { focus.requestFocus() } }
     LaunchedEffect(filing) {
         if (filing == null) return@LaunchedEffect
         delay(Motion.CONFIRM_HOLD_MS)
@@ -154,6 +158,7 @@ fun AddSheet(
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             listOf(Direction.DEBIT to "Paid", Direction.CREDIT to "Received").forEachIndexed { i, (d, label) ->
                 SegmentedButton(
+                    enabled = !moneyLocked,
                     selected = direction == d,
                     onClick = { direction = d; haptics.performHapticFeedback(Haptics.tick) },
                     shape = SegmentedButtonDefaults.itemShape(i, 2),
@@ -163,7 +168,7 @@ fun AddSheet(
 
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
             Box {
-                TextButton(onClick = { pickingCurrency = true }, modifier = Modifier.heightIn(min = 48.dp)) { Text(currency) }
+                TextButton(onClick = { pickingCurrency = true }, enabled = !moneyLocked, modifier = Modifier.heightIn(min = 48.dp)) { Text(currency) }
                 DropdownMenu(pickingCurrency, onDismissRequest = { pickingCurrency = false }) {
                     (currencies + CommonCurrencies).distinct().forEach { c ->
                         DropdownMenuItem(text = { Text(c) }, onClick = { currency = c; pickingCurrency = false })
@@ -176,7 +181,12 @@ fun AddSheet(
                 label = { Text(if (direction == Direction.DEBIT) "Amount paid" else "Amount received") },
                 singleLine = true,
                 isError = amountError,
-                supportingText = if (amountError) ({ Text("Enter an amount above zero") }) else null,
+                enabled = !moneyLocked,
+                supportingText = when {
+                    amountError -> ({ Text("Enter an amount above zero") })
+                    moneyLocked -> ({ Text("From your bank's message, so it can't be changed") })
+                    else -> null
+                },
                 textStyle = MaterialTheme.typography.headlineSmall,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                 modifier = Modifier.weight(1f).focusRequester(focus).testTag("amount"),
@@ -202,7 +212,7 @@ fun AddSheet(
         }
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            categories.sortedByDescending { it.id == suggested }.forEach { c ->
+            categories.sortedByDescending { it.id == (suggested ?: initial?.categoryId) }.forEach { c ->
                 CategoryChip(
                     name = c.name, slot = c.slot, icon = c.icon,
                     selected = selected == c.id,
