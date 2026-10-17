@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Looper
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -78,6 +79,10 @@ class ReviewTest {
 class ReviewSheetTest {
     @get:Rule val compose = createEmptyComposeRule()
 
+    // The sheet appears once its payment has loaded from the database, off the main thread, so wait for it.
+    private fun waitFor(text: String) =
+        compose.waitUntil(5_000) { compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+
     @Test fun filingOneMovesStraightToTheNext() {
         val app = ApplicationProvider.getApplicationContext<ExpenseApp>()
         shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
@@ -88,11 +93,14 @@ class ReviewSheetTest {
                 app.onMessage(Source.SMS, "VM-CANBNK", canara.format("2,000.00"), 2_000L)!!
         }
         ActivityScenario.launch<CategorySheetActivity>(CategorySheetActivity.reviewIntent(app, longArrayOf(a, b))).use {
+            waitFor("1 of 2")
             compose.onNodeWithText("1 of 2", useUnmergedTree = true).assertExists()
             compose.onNodeWithText("Food").performClick()
             compose.mainClock.advanceTimeBy(Motion.CONFIRM_HOLD_MS + 500)
             compose.waitForIdle()
+            waitFor("2 of 2")
             compose.onNodeWithText("2 of 2", useUnmergedTree = true).assertExists()
+            compose.waitUntil(5_000) { compose.onAllNodesWithText("Groceries").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Groceries").performClick()
             compose.mainClock.advanceTimeBy(Motion.CONFIRM_HOLD_MS + 500)
             compose.waitForIdle()
@@ -114,8 +122,10 @@ class ReviewSheetTest {
                 app.onMessage(Source.SMS, "VM-CANBNK", canara.format("4,000.00"), 6_000L)!!
         }
         ActivityScenario.launch<CategorySheetActivity>(CategorySheetActivity.reviewIntent(app, longArrayOf(a, b))).use { scenario ->
+            waitFor("Skip")
             compose.onNodeWithText("Skip").performScrollTo().performClick()
             compose.waitForIdle()
+            waitFor("2 of 2")
             compose.onNodeWithText("2 of 2", useUnmergedTree = true).assertExists()
             compose.onNodeWithText("Skip").performScrollTo().performClick()
             compose.mainClock.advanceTimeBy(2_000)
@@ -140,6 +150,7 @@ class ReviewSheetTest {
             app.onMessage(Source.SMS, "VM-CANBNK", "An amount of INR 5,050.00 has been DEBITED to your account XXX778 on 06/10/2026. - Canara Bank", 7_000L)!!
         }
         ActivityScenario.launch<CategorySheetActivity>(CategorySheetActivity.reviewIntent(app, longArrayOf(a))).use {
+            waitFor("Skip")
             compose.onNodeWithText("Skip").performScrollTo().assertExists()
         }
     }

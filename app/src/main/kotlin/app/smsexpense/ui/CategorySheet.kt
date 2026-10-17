@@ -107,6 +107,8 @@ fun CategorySheet(
     knownPayee: Boolean = false,
     /** Category ids by how often the person uses them, most first. Offered when there's no guess (#166). */
     mostUsed: List<Long> = emptyList(),
+    /** "Where this came from": one line per source that reported the payment (#171). */
+    sources: List<SourceLine> = emptyList(),
 ) {
     var menu by remember { mutableStateOf(false) }
     var alwaysUse by rememberSaveable { mutableStateOf(false) }
@@ -206,6 +208,8 @@ fun CategorySheet(
             }
         }
 
+        if (!choosing && sources.isNotEmpty()) WhereThisCameFrom(sources)
+
         // Set before the tap, since one tap files. Off by default: a one-off shouldn't change every payment after it.
         if (choosing && knownPayee && merchant != null) {
             Row(
@@ -280,6 +284,23 @@ fun CategorySheet(
                 enabled = selected != null || newName.isNotBlank(),
                 modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
             ) { Text("Save") }
+        }
+    }
+}
+
+/** What the app saw, so a payment nobody typed can be trusted and isn't counted twice (#171). Never the message itself. */
+@Composable
+private fun WhereThisCameFrom(sources: List<SourceLine>) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Text("Where this came from", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        sources.forEach { line ->
+            Column {
+                Text(line.text, style = MaterialTheme.typography.bodyMedium)
+                line.payee?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+        }
+        Provenance.footer(sources.size)?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
