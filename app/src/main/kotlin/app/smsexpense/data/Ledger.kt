@@ -3,13 +3,18 @@ package app.smsexpense.data
 import app.smsexpense.core.Categorizer
 import app.smsexpense.core.DefaultCategories
 import app.smsexpense.core.Direction
+import app.smsexpense.core.ModelFallback
 import app.smsexpense.core.SmsParser
 import app.smsexpense.core.SmsReading
 import app.smsexpense.core.Source
 import java.security.MessageDigest
 
 /** The app's operations on stored money, in one place so screens and receivers share them. */
-class Ledger(private val db: AppDatabase) {
+class Ledger(
+    private val db: AppDatabase,
+    /** Reads a prompt with an on-device model, or returns null when there is none. Never a network call. */
+    private val model: (suspend (String) -> String?)? = null,
+) {
 
     suspend fun seedDefaultCategories() {
         if (db.categories().all().isNotEmpty()) return
@@ -21,7 +26,12 @@ class Ledger(private val db: AppDatabase) {
      * @return the new transaction's id, or null when the message was ignored or already saved.
      */
     suspend fun record(source: Source, sender: String, body: String, receivedAt: Long): Long? {
-        val reading = SmsParser.parse(source, sender, body) as? SmsReading.Transaction ?: return null
+        val reading = when (val r = SmsParser.parse(source, sender, body)) {
+            is SmsReading.Transaction -> r
+            // The rules could not read the amount; the on-device model gets one try, and its answer is checked.
+            SmsReading.NotUnderstood -> model?.let { ModelFallback.accept(body, it(ModelFallback.prompt(body))) } ?: return null
+            is SmsReading.Ignored -> return null
+        }
         sameTransactionFromOtherSource(reading, source, receivedAt)?.let { twin ->
             // Keep the first one; if it had no payee and this one names it, fill it in.
             reading.merchant?.let { db.transactions().fillMerchant(twin.id, it) }

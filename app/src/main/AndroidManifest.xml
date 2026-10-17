@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Used only to read bank transaction messages on the phone. See PermissionScreen. -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
@@ -7,6 +8,11 @@
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- The app never goes online. ML Kit's usage reporting asks for these; removing them keeps every
+         message and every statistic on the phone. AICore downloads the model itself. PermissionsTest guards this. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
     <application
         android:name=".ExpenseApp"
