@@ -45,9 +45,6 @@ interface TransactionDao {
     )
     suspend fun fromOtherSourcesNear(direction: Direction, currency: String, source: String, from: Long, to: Long): List<TransactionEntity>
 
-    @Query("UPDATE transactions SET merchant = :merchant WHERE id = :id AND merchant IS NULL")
-    suspend fun fillMerchant(id: Long, merchant: String)
-
     /** Category ids by how many payments use them, most first, for the sheet's quick picks (#166). */
     @Query("SELECT categoryId FROM transactions WHERE categoryId IS NOT NULL AND deleted = 0 GROUP BY categoryId ORDER BY COUNT(*) DESC LIMIT 3")
     suspend fun mostUsedCategories(): List<Long>
