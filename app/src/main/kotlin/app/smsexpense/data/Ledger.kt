@@ -42,9 +42,9 @@ class Ledger(
             accountLast4 = reading.account, seenAt = receivedAt, fingerprint = print,
         )
         sameTransactionFromOtherSource(reading, source, receivedAt)?.let { twin ->
-            // Keep the first one; if it had no payee and this one names it, fill it in. Either way, it was seen again.
-            reading.merchant?.let { db.transactions().fillMerchant(twin.id, it) }
+            // Keep the first one; it was seen again, and the second source may name the payee better.
             db.sightings().insert(seen(twin.id))
+            useClearestName(twin)
             return null
         }
         // Added by hand earlier? File the bank's copy hidden and ask whether it's the same payment (#53).
@@ -134,6 +134,22 @@ class Ledger(
         db.transactions().setCategory(transactionId, categoryId)
         val key = tx.merchant?.let(Categorizer::merchantKey) ?: return
         if (alwaysUse || db.merchantRules().byKey(key) == null) db.merchantRules().upsert(MerchantRuleEntity(key, categoryId))
+    }
+
+    /**
+     * The payment app's name for the payee beats the bank's ("Zomato", not "zomatoorder.payu@hdfcbank"), unless it gave
+     * none (#170). A name the person typed always wins: it matches no source's wording. When the name changes and the
+     * person hasn't picked a category, the guess is redone for the new name.
+     */
+    private suspend fun useClearestName(tx: TransactionEntity) {
+        val seen = db.sightings().forTransaction(tx.id)
+        val typedByPerson = tx.merchant != null && seen.none { it.merchant == tx.merchant }
+        if (typedByPerson) return
+        val clearest = seen.filter { it.source == Source.NOTIFICATION.name }.firstNotNullOfOrNull { it.merchant }
+            ?: seen.firstNotNullOfOrNull { it.merchant }
+        if (clearest == null || clearest == tx.merchant) return
+        val guess = if (tx.confirmed) null else guessCategory(clearest, tx.direction)
+        db.transactions().update(tx.copy(merchant = clearest, categoryId = guess?.id ?: tx.categoryId))
     }
 
     /** True when the app has been taught a category for this payee. */

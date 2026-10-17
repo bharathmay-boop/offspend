@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -53,6 +54,45 @@ class DedupeTest {
         ledger.record(Source.NOTIFICATION, gpay, gpayNotification, 0)
         assertNull(ledger.record(Source.SMS, "VM-PNBSMS", bankSms, 3 * minute))
         assertEquals("California Burrito", all().single().merchant)
+    }
+
+    // #170: the payment app usually names the payee better than the bank.
+    private val hdfcVpa = "Sent Rs.320.00\nFrom HDFC Bank A/C *1234\nTo zomatoorder.payu@hdfcbank\nOn 08/10/26\nRef 412398765012"
+    private val gpayZomato = "Paid ₹320 to Zomato"
+
+    @Test fun theAppsNameReplacesTheBanksWhenTheBankCameFirst() = runTest {
+        ledger.record(Source.SMS, "AD-HDFCBK", hdfcVpa, 0)
+        ledger.record(Source.NOTIFICATION, gpay, gpayZomato, minute)
+        assertEquals("Zomato", all().single().merchant)
+    }
+
+    @Test fun theAppsNameStaysWhenTheBankComesSecond() = runTest {
+        ledger.record(Source.NOTIFICATION, gpay, gpayZomato, 0)
+        ledger.record(Source.SMS, "AD-HDFCBK", hdfcVpa, minute)
+        assertEquals("Zomato", all().single().merchant)
+    }
+
+    @Test fun aNameThePersonTypedAlwaysWins() = runTest {
+        val id = ledger.record(Source.SMS, "AD-HDFCBK", hdfcVpa, 0)!!
+        db.transactions().update(db.transactions().byId(id)!!.copy(merchant = "Office lunch"))
+        ledger.record(Source.NOTIFICATION, gpay, gpayZomato, minute)
+        assertEquals("Office lunch", all().single().merchant)
+    }
+
+    @Test fun aBetterNameGetsAGuessWhenThePersonHasNotPickedOne() = runTest {
+        ledger.record(Source.SMS, "VM-PNBSMS", bankSms, 0)
+        assertNull(all().single().categoryId)
+        ledger.record(Source.NOTIFICATION, gpay, gpayNotification, minute)
+        assertEquals(db.categories().byName("Food")!!.id, all().single().categoryId)
+        assertFalse(all().single().confirmed)
+    }
+
+    @Test fun aCategoryThePersonPickedIsKeptWhenTheNameImproves() = runTest {
+        val id = ledger.record(Source.SMS, "AD-HDFCBK", hdfcVpa, 0)!!
+        val travel = db.categories().byName("Travel")!!.id
+        ledger.setCategory(id, travel)
+        ledger.record(Source.NOTIFICATION, gpay, gpayZomato, minute)
+        assertEquals(travel, all().single().categoryId)
     }
 
     @Test fun paymentsFarApartInTimeAreKeptSeparately() = runTest {
