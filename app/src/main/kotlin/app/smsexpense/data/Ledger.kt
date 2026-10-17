@@ -125,17 +125,27 @@ class Ledger(
         return db.categories().all().first { it.id == id }
     }
 
-    /** Files a transaction under a category, and remembers that choice for the merchant next time. */
-    suspend fun setCategory(transactionId: Long, categoryId: Long) {
+    /**
+     * Files a transaction under a category. A payee seen for the first time is remembered under it. A payee the app
+     * already knows keeps what it was taught, so a one-off doesn't change every payment after it, unless [alwaysUse] (#168).
+     */
+    suspend fun setCategory(transactionId: Long, categoryId: Long, alwaysUse: Boolean = false) {
         val tx = db.transactions().byId(transactionId) ?: return
         db.transactions().setCategory(transactionId, categoryId)
-        tx.merchant?.let { db.merchantRules().upsert(MerchantRuleEntity(Categorizer.merchantKey(it), categoryId)) }
+        val key = tx.merchant?.let(Categorizer::merchantKey) ?: return
+        if (alwaysUse || db.merchantRules().byKey(key) == null) db.merchantRules().upsert(MerchantRuleEntity(key, categoryId))
     }
 
+    /** True when the app has been taught a category for this payee. */
+    suspend fun knowsPayee(merchant: String?): Boolean =
+        merchant != null && db.merchantRules().byKey(Categorizer.merchantKey(merchant)) != null
+
     /** Saves what the person chose on the category sheet. A typed new category is created and used. */
-    suspend fun file(transactionId: Long, categoryId: Long?, newCategoryName: String?, note: String?, newCategoryIcon: String? = null) {
+    suspend fun file(
+        transactionId: Long, categoryId: Long?, newCategoryName: String?, note: String?, newCategoryIcon: String? = null, alwaysUse: Boolean = false,
+    ) {
         val chosen = newCategoryName?.takeIf { it.isNotBlank() }?.let { categoryNamed(it, newCategoryIcon).id } ?: categoryId
-        chosen?.let { setCategory(transactionId, it) }
+        chosen?.let { setCategory(transactionId, it, alwaysUse) }
         setNote(transactionId, note)
     }
 

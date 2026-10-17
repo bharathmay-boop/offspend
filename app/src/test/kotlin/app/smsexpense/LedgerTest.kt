@@ -9,6 +9,7 @@ import app.smsexpense.data.TransactionEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -52,6 +53,35 @@ class LedgerTest {
         ledger.setCategory(save("SWIGGY", "one"), office.id)
 
         assertEquals("Office lunch", ledger.guessCategory("swiggy@icici", Direction.DEBIT)?.name)
+    }
+
+    // #168: a one-off (a gift bought on Amazon) must not change every Amazon payment after it.
+    @Test fun changingAKnownPayeeChangesThisPaymentOnly() = runTest {
+        ledger.setCategory(save("AMAZON", "a1"), ledger.categoryNamed("Shopping").id)
+        assertTrue(ledger.knowsPayee("AMAZON"))
+        val gift = save("AMAZON", "a2")
+        val gifts = ledger.categoryNamed("Gifts")
+        ledger.setCategory(gift, gifts.id)
+        assertEquals(gifts.id, db.transactions().byId(gift)!!.categoryId)
+        assertEquals("Shopping", ledger.guessCategory("AMAZON", Direction.DEBIT)?.name)
+    }
+
+    @Test fun alwaysUseReplacesWhatTheAppRemembers() = runTest {
+        ledger.setCategory(save("AMAZON", "a1"), ledger.categoryNamed("Shopping").id)
+        ledger.file(save("AMAZON", "a2"), ledger.categoryNamed("Gifts").id, null, null, alwaysUse = true)
+        assertEquals("Gifts", ledger.guessCategory("AMAZON", Direction.DEBIT)?.name)
+    }
+
+    @Test fun aPaymentWithNoPayeeTeachesNothing() = runTest {
+        val id = db.transactions().insert(
+            TransactionEntity(
+                direction = Direction.DEBIT, amount = BigDecimal("450"), currency = "INR", merchant = null,
+                accountLast4 = null, occurredAt = 0, categoryId = null, note = null, source = "SMS", fingerprint = "none",
+            ),
+        )
+        ledger.setCategory(id, ledger.categoryNamed("Cash").id, alwaysUse = true)
+        assertTrue(db.merchantRules().all().isEmpty())
+        assertFalse(ledger.knowsPayee(null))
     }
 
     @Test fun settingACategoryConfirmsTheTransaction() = runTest {
