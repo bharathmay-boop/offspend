@@ -38,14 +38,14 @@ class CategorySheetTest {
 
     private var skipped = 0
 
-    private fun show(initialCategory: Long?, maxHeight: Int = 2000, initialNote: String? = null, canSkip: Boolean = false) = compose.setContent {
+    private fun show(initialCategory: Long?, maxHeight: Int = 2000, initialNote: String? = null, canSkip: Boolean = false, knownPayee: Boolean = false) = compose.setContent {
         ExpenseTheme {
             Box(Modifier.height(maxHeight.dp)) {
             CategorySheet(
                 amount = BigDecimal("320.00"), currency = "INR", direction = Direction.DEBIT,
                 merchant = "CALIFORNIA BURRITO", detail = "8 Oct · Account ··1234",
                 categories = categories, initialCategoryId = initialCategory, initialNote = initialNote,
-                onSave = { saved = it }, onSkip = if (canSkip) ({ skipped++ }) else null,
+                onSave = { saved = it }, onSkip = if (canSkip) ({ skipped++ }) else null, knownPayee = knownPayee,
             )
             }
         }
@@ -76,6 +76,21 @@ class CategorySheetTest {
         compose.waitForIdle()
         assertEquals(SheetResult(2, null, ""), saved)
         compose.onNodeWithText("Save").assertDoesNotExist()
+    }
+
+    // #168: for a payee the app knows, a pick changes this payment only, unless the switch is on.
+    @Test fun aKnownPayeeOffersToUseThePickEveryTime() {
+        show(initialCategory = 1, knownPayee = true)
+        compose.onNodeWithText("Use my pick for every California Burrito payment").performClick()
+        compose.onNodeWithText("Groceries").performClick()
+        compose.mainClock.advanceTimeBy(Motion.CONFIRM_HOLD_MS + 100)
+        compose.waitForIdle()
+        assertEquals(SheetResult(2, null, "", alwaysUse = true), saved)
+    }
+
+    @Test fun aNewPayeeHasNoSwitchBecauseThePickIsRememberedAnyway() {
+        show(initialCategory = 1)
+        compose.onNodeWithText("Use my pick for every California Burrito payment").assertDoesNotExist()
     }
 
     @Test fun theGuessComesFirstAndIsLabelled() {

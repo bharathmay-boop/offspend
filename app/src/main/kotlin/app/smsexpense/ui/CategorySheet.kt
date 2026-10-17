@@ -45,6 +45,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.material3.Switch
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -68,7 +71,14 @@ import kotlinx.coroutines.delay
 import java.math.BigDecimal
 
 /** What the sheet hands back when the payment is filed. A new category name wins over a picked one. */
-data class SheetResult(val categoryId: Long?, val newCategoryName: String?, val note: String, val newCategoryIcon: String? = null)
+data class SheetResult(
+    val categoryId: Long?,
+    val newCategoryName: String?,
+    val note: String,
+    val newCategoryIcon: String? = null,
+    /** Also teach the app this category for the payee, replacing what it knew (#168). */
+    val alwaysUse: Boolean = false,
+)
 
 /**
  * The content of the bottom sheet that files a transaction. In the usual case one tap on a category files it.
@@ -92,8 +102,11 @@ fun CategorySheet(
     /** Edit and Delete in the overflow menu (#52). Null hides the menu. */
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
+    /** The app already knows a category for this payee, so a pick changes this payment only unless switched (#168). */
+    knownPayee: Boolean = false,
 ) {
     var menu by remember { mutableStateOf(false) }
+    var alwaysUse by rememberSaveable { mutableStateOf(false) }
     var selected by rememberSaveable { mutableStateOf(initialCategoryId) }
     var note by rememberSaveable { mutableStateOf(initialNote.orEmpty()) }
     var noting by rememberSaveable { mutableStateOf(!initialNote.isNullOrBlank()) }
@@ -105,7 +118,7 @@ fun CategorySheet(
     val haptics = LocalHapticFeedback.current
     val save by rememberUpdatedState {
         val typed = newName.trim().ifEmpty { null }
-        onSave(SheetResult(selected, typed, note, newIcon.takeIf { typed != null }))
+        onSave(SheetResult(selected, typed, note, newIcon.takeIf { typed != null }, alwaysUse))
     }
 
     LaunchedEffect(filing) {
@@ -180,6 +193,22 @@ fun CategorySheet(
             }
             if (onSkip != null) {
                 AssistChip(onClick = { if (filing == null) onSkip() }, label = { Text("Skip") }, modifier = Modifier.heightIn(min = 48.dp))
+            }
+        }
+
+        // Set before the tap, since one tap files. Off by default: a one-off shouldn't change every payment after it.
+        if (knownPayee && merchant != null) {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    .toggleable(value = alwaysUse, role = Role.Switch, onValueChange = { alwaysUse = it; haptics.performHapticFeedback(Haptics.tick) }),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Use my pick for every ${displayMerchant(merchant)} payment",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(checked = alwaysUse, onCheckedChange = null)
             }
         }
 

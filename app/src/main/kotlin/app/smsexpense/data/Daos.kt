@@ -85,4 +85,7 @@ interface MerchantRuleDao {
 
     @Query("SELECT * FROM merchant_rules")
     suspend fun all(): List<MerchantRuleEntity>
+
+    @Query("SELECT * FROM merchant_rules WHERE merchantKey = :key")
+    suspend fun byKey(key: String): MerchantRuleEntity?
 }
