@@ -36,15 +36,30 @@ class NotificationTest {
         app.onMessage(Source.SMS, "AD-HDFCBK", payment, 1_000L)
         val n = notifications.single()
         assertEquals("−₹320.00 · California Burrito", n.extras.getString("android.title"))
-        assertEquals("Filed under Food. Looks right?", n.extras.getString("android.text"))
-        assertEquals(listOf("Looks right", "Change", "Add note"), n.actions.map { it.title.toString() })
+        // #167: the guess is already filed, so it says so; tapping the notification is how to change it.
+        assertEquals("Food · Tap to change", n.extras.getString("android.text"))
+        assertEquals(listOf("Yes, Food", "Add note"), n.actions.map { it.title.toString() })
+    }
+
+    @Test fun aPayeeFiledUnderThisCategoryBeforeJustSaysOkay() = runTest {
+        val first = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 1_000L)!!
+        NotificationActionReceiver.handle(
+            app, Intent(TransactionNotifier.ACTION_CONFIRM).putExtra(TransactionNotifier.EXTRA_CATEGORY, app.db.categories().byName("Food")!!.id), first,
+        )
+        app.onMessage(Source.SMS, "AD-HDFCBK", payment.replace("320.00", "280.00"), 9_000L)
+        assertEquals(listOf("Okay", "Add note"), notifications.single().actions.map { it.title.toString() })
+    }
+
+    @Test fun aLongCategoryNameIsCutSoTheButtonFits() {
+        assertEquals("Yes, Office supplie…", TransactionNotifier.confirmLabel("Office supplies and printing", filedBefore = false))
+        assertEquals("Yes, EMI & loans", TransactionNotifier.confirmLabel("EMI & loans", filedBefore = false))
     }
 
     @Test fun anUnknownPayeeAsksForACategoryInstead() = runTest {
         app.onMessage(Source.SMS, "VM-CANBNK", "An amount of INR 1,050.00 has been DEBITED to your account XXX778 on 06/10/2026. - Canara Bank", 2_000L)
         val n = notifications.single()
-        assertEquals("Which category is this?", n.extras.getString("android.text"))
-        assertEquals(listOf("Pick category", "Add note"), n.actions.map { it.title.toString() })
+        assertEquals("Needs a category", n.extras.getString("android.text"))
+        assertEquals(listOf("Add note"), n.actions.map { it.title.toString() })
     }
 
     @Test fun historyImportsDoNotNotify() = runTest {
@@ -52,7 +67,7 @@ class NotificationTest {
         assertTrue(notifications.isEmpty())
     }
 
-    @Test fun looksRightConfirmsLearnsAndDismisses() = runTest {
+    @Test fun yesConfirmsLearnsAndDismisses() = runTest {
         val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 4_000L)!!
         val food = app.db.categories().byName("Food")!!
         NotificationActionReceiver.handle(
@@ -87,7 +102,7 @@ class NotificationTest {
         NotificationActionReceiver.handle(app, intent, id)
         assertEquals("Team lunch", app.db.transactions().byId(id)!!.note)
         // The re-posted notification shows the note, so the person can see it was saved (#48).
-        assertEquals("Note: Team lunch. Filed under Food. Looks right?", notifications.single().extras.getString("android.text"))
+        assertEquals("Note: Team lunch · Food · Tap to change", notifications.single().extras.getString("android.text"))
     }
 
     // Android 16 groups an app's loose notifications from the second one on and marks them all silent (#71).

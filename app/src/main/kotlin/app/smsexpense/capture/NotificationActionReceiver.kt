@@ -7,7 +7,7 @@ import androidx.core.app.RemoteInput
 import app.smsexpense.ExpenseApp
 import kotlinx.coroutines.launch
 
-/** Handles the notification's buttons (Looks right, Add note, and Same payment? Yes or No) without opening the app. */
+/** Handles the notification's buttons ("Yes, Food" or "Okay", Add note, and Same payment? Yes or No) without opening the app. */
 class NotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val txId = intent.getLongExtra(TransactionNotifier.EXTRA_TX, -1)
@@ -35,20 +35,14 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 TransactionNotifier.ACTION_SEPARATE -> {
                     // Not the same payment: show the bank's copy and ask for its category like any new payment.
                     app.ledger.restore(txId)
-                    app.db.transactions().byId(txId)?.let { tx ->
-                        val category = tx.categoryId?.let { id -> app.db.categories().all().firstOrNull { it.id == id } }
-                        TransactionNotifier.show(app, tx, category)
-                    }
+                    app.db.transactions().byId(txId)?.let { app.showPayment(it) }
                 }
                 TransactionNotifier.ACTION_NOTE -> {
                     val note = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(TransactionNotifier.KEY_NOTE)
                     // A blank reply is not a request to delete a note; clearing one is done on the category sheet.
                     if (!note.isNullOrBlank()) app.ledger.setNote(txId, note.toString())
                     // Re-post so the reply spinner stops; the new text shows the saved note.
-                    app.db.transactions().byId(txId)?.let { tx ->
-                        val category = tx.categoryId?.let { id -> app.db.categories().all().firstOrNull { it.id == id } }
-                        TransactionNotifier.show(app, tx, category)
-                    }
+                    app.db.transactions().byId(txId)?.let { app.showPayment(it) }
                 }
             }
         }
