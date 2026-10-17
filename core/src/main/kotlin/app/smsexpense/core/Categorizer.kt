@@ -11,15 +11,17 @@ val DefaultCategories = listOf(
  */
 object Categorizer {
     /** "swiggy.instamart@icici" and "SWIGGY INSTAMART" both become "swiggy instamart". */
-    fun merchantKey(merchant: String): String =
-        plain(merchant)
-            .replace(Regex("\\b(pvt|ltd|private|limited|india|inc|llp)\\b"), " ")
-            .trim()
-            .replace(Regex("\\s+"), " ")
+    fun merchantKey(merchant: String): String {
+        val whole = plain(merchant).trim().replace(Regex("\\s+"), " ")
+        val stripped = whole.replace(Regex("\\b(pvt|ltd|private|limited|india|inc|llp)\\b"), " ").trim().replace(Regex("\\s+"), " ")
+        // Never "": every payee with an empty key would share one merchant memory entry.
+        return stripped.ifEmpty { whole }.ifEmpty { merchant.trim().lowercase() }
+    }
 
     // Keywords match before the suffixes are stripped, or "Air India" would become "air" (#153).
+    // Letters in any script are kept, so payees written in Hindi get their own keys.
     private fun plain(merchant: String): String =
-        merchant.substringBefore('@').lowercase().replace(Regex("[^a-z0-9]+"), " ")
+        merchant.substringBefore('@').lowercase().replace(Regex("[^\\p{L}\\p{M}\\p{N}]+"), " ")
 
     // ponytail: keyword list, swap for the on-device model (#14) when this stops being enough
     private val keywords: List<Pair<Regex, String>> = listOf(

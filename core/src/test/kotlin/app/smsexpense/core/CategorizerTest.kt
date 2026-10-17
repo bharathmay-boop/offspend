@@ -38,6 +38,16 @@ class CategorizerTest {
         assertEquals(Categorizer.merchantKey("XYZ India Pvt Ltd"), Categorizer.merchantKey("XYZ"))
     }
 
+    // Graphite on #116: payees that reduced to an empty key all shared one merchant memory entry.
+    @Test fun noPayeeGetsAnEmptyKey() {
+        for (name in listOf("स्विगी", "डी मार्ट", "India Pvt Ltd", "***")) assert(Categorizer.merchantKey(name).isNotEmpty()) { name }
+        assert(Categorizer.merchantKey("स्विगी") != Categorizer.merchantKey("डी मार्ट"))
+        // Vowel signs are combining marks, not letters; dropping them would split the word.
+        assertEquals("स्विगी", Categorizer.merchantKey("स्विगी"))
+        assert(Categorizer.merchantKey("India Pvt Ltd") != Categorizer.merchantKey("Pvt Ltd"))
+        assertNull(Categorizer.guess("डी मार्ट", Direction.DEBIT, mapOf(Categorizer.merchantKey("स्विगी") to "Food")))
+    }
+
     @Test fun guessesForTheTestSetMerchants() {
         val guessed = Fixtures.all.filter { it.expected.is_transaction }.count {
             Categorizer.guess(it.expected.merchant, Direction.valueOf(it.expected.direction!!), emptyMap()) != null
