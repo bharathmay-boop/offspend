@@ -52,6 +52,11 @@ class MainActivity : ComponentActivity() {
                 Surface(Modifier.fillMaxSize()) {
                     var granted by remember { mutableStateOf(hasSmsPermission()) }
                     var denied by remember { mutableStateOf(false) }
+                    // SMS may have been turned on in Settings while the app was away (#151). Home starts the import.
+                    LifecycleResumeEffect(Unit) {
+                        granted = hasSmsPermission()
+                        onPauseOrDispose {}
+                    }
                     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
                         granted = result[Manifest.permission.RECEIVE_SMS] == true
                         if (result[Manifest.permission.READ_SMS] == true) app.importHistoryOnce()
