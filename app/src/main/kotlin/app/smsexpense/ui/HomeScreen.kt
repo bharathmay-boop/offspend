@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.smsexpense.core.CurrencyMonth
@@ -37,14 +38,17 @@ import app.smsexpense.ui.components.CategoryIconSize
 import app.smsexpense.ui.components.PrivacyNote
 import app.smsexpense.ui.components.TransactionRow
 import app.smsexpense.ui.components.categoryColor
+import app.smsexpense.ui.components.dayLabel
+import app.smsexpense.ui.components.displayMerchant
 import app.smsexpense.ui.components.formatMoney
 import app.smsexpense.ui.theme.AppTheme
 import app.smsexpense.ui.theme.Motion
 import app.smsexpense.ui.theme.Spacing
-import java.text.DateFormat
+import java.time.Instant
+import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Date
 
 /** The main screen: one month at a time, totals per currency, spending by category, then the payments. */
 @Composable
@@ -59,7 +63,9 @@ fun HomeScreen(
     onPreviousMonth: () -> Unit,
     onNextMonth: (() -> Unit)?,
     onOpen: (TransactionEntity) -> Unit,
+    today: LocalDate = LocalDate.now(),
 ) {
+    val zone = ZoneId.systemDefault()
     val slotOf = categories.values.associate { it.name to it.slot }
     LazyColumn(Modifier.safeDrawingPadding()) {
         item {
@@ -99,28 +105,28 @@ fun HomeScreen(
             }
         }
         items(summaries, key = { it.currency }) { s -> CurrencyBlock(s, slotOf) }
-        if (transactions.isNotEmpty()) {
-            item {
+        // One header per day instead of a date on every row. The list arrives newest first, so groups keep that order.
+        transactions.groupBy { Instant.ofEpochMilli(it.occurredAt).atZone(zone).toLocalDate() }.forEach { (day, onDay) ->
+            item(key = "day-$day") {
                 Text(
-                    "PAYMENTS",
-                    style = MaterialTheme.typography.labelMedium,
+                    dayLabel(day, today),
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = Spacing.l, top = Spacing.xl, bottom = Spacing.s),
+                    modifier = Modifier.animateItem().padding(start = Spacing.l, top = Spacing.xl, bottom = Spacing.xs).semantics { heading() },
                 )
             }
-        }
-        items(transactions, key = { it.id }) { tx ->
-            val category = tx.categoryId?.let(categories::get)
-            TransactionRow(
-                merchant = tx.merchant ?: tx.accountLast4?.let { "Account ··$it" } ?: "Unknown payee",
-                category = category?.name,
-                categorySlot = category?.slot ?: -1,
-                date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(tx.occurredAt)),
-                amount = tx.amount,
-                currency = tx.currency,
-                direction = tx.direction,
-                modifier = Modifier.clickable { onOpen(tx) },
-            )
+            items(onDay, key = { it.id }) { tx ->
+                val category = tx.categoryId?.let(categories::get)
+                TransactionRow(
+                    merchant = tx.merchant?.let(::displayMerchant) ?: tx.accountLast4?.let { "Account ··$it" } ?: "Unknown payee",
+                    category = category?.name,
+                    categorySlot = category?.slot ?: -1,
+                    amount = tx.amount,
+                    currency = tx.currency,
+                    direction = tx.direction,
+                    modifier = Modifier.animateItem().clickable { onOpen(tx) },
+                )
+            }
         }
     }
 }

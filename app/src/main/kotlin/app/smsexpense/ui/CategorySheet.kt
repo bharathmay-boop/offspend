@@ -40,6 +40,7 @@ import app.smsexpense.core.Direction
 import app.smsexpense.data.CategoryEntity
 import app.smsexpense.ui.components.AmountText
 import app.smsexpense.ui.components.CategoryChip
+import app.smsexpense.ui.components.displayMerchant
 import app.smsexpense.ui.theme.AppTheme
 import app.smsexpense.ui.theme.Haptics
 import app.smsexpense.ui.theme.Motion
@@ -92,7 +93,7 @@ fun CategorySheet(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             AmountText(amount, currency, direction, style = AppTheme.type.amountHero)
-            Text(merchant ?: "Payee not named in the message", style = MaterialTheme.typography.titleMedium)
+            Text(merchant?.let(::displayMerchant) ?: "Payee not named in the message", style = MaterialTheme.typography.titleMedium)
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 

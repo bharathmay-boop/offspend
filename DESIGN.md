@@ -109,7 +109,8 @@ Shared pieces in `ui/components/`. Build new screens from these and from Materia
 - `AmountText`: an amount with currency, sign and the right money color. Always use it for money.
 - `CategoryIcon`: a category's icon (or letter) on a circle of its color.
 - `CategoryChip`: a category with its icon. Selected and unselected states.
-- `TransactionRow`: merchant, category, date and amount in one row.
+- `TransactionRow`: category icon, merchant, category and amount in one row. The day is not repeated on the row; the list groups payments under day headers ("Today", "Yesterday", "Tue, 6 Oct").
+- `displayMerchant`: shows a payee the way people write it (Swiggy, not SWIGGY), keeping short forms like KFC and IRCTC in capitals. Use it wherever a merchant name is shown, including the notification.
 - `PrivacyNote`: the short "stays on this phone" line with a lock icon.
 
 ## Accessibility

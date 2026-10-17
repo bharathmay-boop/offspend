@@ -60,7 +60,7 @@ class CategorySheetTest {
 
     @Test fun showsTheAmountAndPayee() {
         show(1)
-        compose.onNodeWithText("CALIFORNIA BURRITO").assertExists()
+        compose.onNodeWithText("California Burrito").assertExists()
         // TalkBack reads the whole amount with its direction, not just the symbols.
         compose.onNodeWithContentDescription("Paid ₹320.00").assertExists()
     }

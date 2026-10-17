@@ -16,6 +16,7 @@ import app.smsexpense.R
 import app.smsexpense.core.Direction
 import app.smsexpense.data.CategoryEntity
 import app.smsexpense.data.TransactionEntity
+import app.smsexpense.ui.components.displayMerchant
 import app.smsexpense.ui.components.formatMoney
 
 /** The one-tap notification shown for each new transaction. */
@@ -44,7 +45,7 @@ object TransactionNotifier {
 
     fun title(tx: TransactionEntity): String {
         val sign = if (tx.direction == Direction.DEBIT) "−" else "+"
-        val who = tx.merchant ?: if (tx.direction == Direction.DEBIT) "Payment" else "Money received"
+        val who = tx.merchant?.let(::displayMerchant) ?: if (tx.direction == Direction.DEBIT) "Payment" else "Money received"
         return "$sign${formatMoney(tx.amount, tx.currency)} · $who"
     }
 
