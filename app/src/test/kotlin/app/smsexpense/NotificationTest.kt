@@ -85,5 +85,7 @@ class NotificationTest {
         )
         NotificationActionReceiver.handle(app, intent, id)
         assertEquals("Team lunch", app.db.transactions().byId(id)!!.note)
+        // The re-posted notification shows the note, so the person can see it was saved (#48).
+        assertEquals("Note: Team lunch. Filed under Food. Looks right?", notifications.single().extras.getString("android.text"))
     }
 }

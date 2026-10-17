@@ -48,8 +48,10 @@ object TransactionNotifier {
         return "$sign${formatMoney(tx.amount, tx.currency)} · $who"
     }
 
-    fun text(category: CategoryEntity?): String =
-        if (category != null) "Filed under ${category.name}. Looks right?" else "Which category is this?"
+    fun text(category: CategoryEntity?, note: String? = null): String {
+        val ask = if (category != null) "Filed under ${category.name}. Looks right?" else "Which category is this?"
+        return if (note.isNullOrBlank()) ask else "Note: $note. $ask"
+    }
 
     fun show(context: Context, tx: TransactionEntity, category: CategoryEntity?) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
@@ -58,7 +60,7 @@ object TransactionNotifier {
         val builder = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title(tx))
-            .setContentText(text(category))
+            .setContentText(text(category, tx.note))
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(openIntent(context, tx.id))
