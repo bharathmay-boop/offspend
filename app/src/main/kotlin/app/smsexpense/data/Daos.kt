@@ -86,3 +86,12 @@ interface MerchantRuleDao {
     @Query("SELECT * FROM merchant_rules")
     suspend fun all(): List<MerchantRuleEntity>
 }
+
+@Dao
+interface SightingDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(sighting: SightingEntity): Long
+
+    @Query("SELECT * FROM sightings WHERE transactionId = :transactionId ORDER BY seenAt, id")
+    suspend fun forTransaction(transactionId: Long): List<SightingEntity>
+}

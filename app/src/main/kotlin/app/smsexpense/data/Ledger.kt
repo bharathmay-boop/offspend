@@ -36,9 +36,15 @@ class Ledger(
             SmsReading.NotUnderstood -> model?.let { ModelFallback.accept(body, it(ModelFallback.prompt(body))) } ?: return null
             is SmsReading.Ignored -> return null
         }
+        val print = fingerprint(source, sender, body, receivedAt)
+        fun seen(txId: Long) = SightingEntity(
+            transactionId = txId, source = source.name, sender = sender, merchant = reading.merchant,
+            accountLast4 = reading.account, seenAt = receivedAt, fingerprint = print,
+        )
         sameTransactionFromOtherSource(reading, source, receivedAt)?.let { twin ->
-            // Keep the first one; if it had no payee and this one names it, fill it in.
+            // Keep the first one; if it had no payee and this one names it, fill it in. Either way, it was seen again.
             reading.merchant?.let { db.transactions().fillMerchant(twin.id, it) }
+            db.sightings().insert(seen(twin.id))
             return null
         }
         // Added by hand earlier? File the bank's copy hidden and ask whether it's the same payment (#53).
@@ -55,11 +61,12 @@ class Ledger(
                 categoryId = guess?.id,
                 note = null,
                 source = source.name,
-                fingerprint = fingerprint(source, sender, body, receivedAt),
+                fingerprint = print,
                 deleted = handAdded != null,
             ),
         )
         if (id == -1L) return null
+        db.sightings().insert(seen(id))
         if (handAdded != null) {
             // Matched once only, and it gains the account the bank named.
             db.transactions().update(
@@ -154,6 +161,7 @@ class Ledger(
                 confirmed = true,
             ),
         )
+        db.sightings().insert(SightingEntity(transactionId = id, source = MANUAL, sender = null, merchant = r.payee, accountLast4 = null, seenAt = now, fingerprint = null))
         if (r.payee != null && r.categoryId != null) {
             db.merchantRules().upsert(MerchantRuleEntity(Categorizer.merchantKey(r.payee), r.categoryId))
         }
