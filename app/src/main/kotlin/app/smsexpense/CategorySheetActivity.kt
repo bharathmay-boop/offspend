@@ -44,7 +44,12 @@ class CategorySheetActivity : ComponentActivity() {
             ExpenseTheme {
                 var index by rememberSaveable { mutableIntStateOf(0) }
                 var tx by remember { mutableStateOf<TransactionEntity?>(null) }
-                LaunchedEffect(index) { tx = app.db.transactions().byId(queue[index]) ?: run { finish(); null } }
+                var knownPayee by remember { mutableStateOf(false) }
+                LaunchedEffect(index) {
+                    val loaded = app.db.transactions().byId(queue[index]) ?: run { finish(); return@LaunchedEffect }
+                    knownPayee = app.ledger.knowsPayee(loaded.merchant)
+                    tx = loaded
+                }
                 val categories by app.db.categories().observeAll().collectAsState(initial = emptyList())
                 val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
                 val scope = rememberCoroutineScope()
@@ -65,6 +70,7 @@ class CategorySheetActivity : ComponentActivity() {
                             categories = categories,
                             initialCategoryId = current.categoryId,
                             initialNote = current.note,
+                            knownPayee = knownPayee,
                             progress = if (queue.size > 1) "${index + 1} of ${queue.size}" else null,
                             // Skip leaves the payment as it is: no category, no note, nothing learned.
                             onSkip = if (reviewing) ({
@@ -95,7 +101,7 @@ class CategorySheetActivity : ComponentActivity() {
                             },
                             onSave = { result ->
                                 scope.launch {
-                                    app.ledger.file(current.id, result.categoryId, result.newCategoryName, result.note, result.newCategoryIcon)
+                                    app.ledger.file(current.id, result.categoryId, result.newCategoryName, result.note, result.newCategoryIcon, result.alwaysUse)
                                     if (index < queue.lastIndex) {
                                         index++
                                     } else {
