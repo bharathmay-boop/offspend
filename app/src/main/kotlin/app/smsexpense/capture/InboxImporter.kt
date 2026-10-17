@@ -4,8 +4,12 @@ import android.content.Context
 import android.provider.Telephony
 import app.smsexpense.core.Source
 
-/** One message from the phone's SMS inbox. */
-data class InboxMessage(val sender: String, val body: String, val receivedAt: Long)
+/**
+ * One message from the phone's SMS inbox.
+ * [receivedAt] is when the phone got it; [sentAt] is the time the message centre stamped on it,
+ * which is the time the live receiver sees too.
+ */
+data class InboxMessage(val sender: String, val body: String, val receivedAt: Long, val sentAt: Long = receivedAt)
 
 /**
  * Reads past messages from the SMS inbox and files the transactions among them, without notifications.
@@ -17,20 +21,20 @@ class InboxImporter(
 ) {
     /** @return how many new transactions were saved. */
     suspend fun importSince(sinceMillis: Long): Int =
-        readInbox(sinceMillis).count { onMessage(Source.SMS, it.sender, it.body, it.receivedAt) != null }
+        readInbox(sinceMillis).count { onMessage(Source.SMS, it.sender, it.body, it.sentAt) != null }
 
     companion object {
         const val HISTORY_DAYS = 90L
 
         /** Reads the real inbox. Needs READ_SMS. */
         fun systemInbox(context: Context): (Long) -> List<InboxMessage> = { since ->
-            val columns = arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE)
+            val columns = arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.DATE_SENT)
             context.contentResolver.query(
                 Telephony.Sms.Inbox.CONTENT_URI, columns, "${Telephony.Sms.DATE} >= ?", arrayOf(since.toString()),
                 "${Telephony.Sms.DATE} ASC",
             )?.use { c ->
                 buildList {
-                    while (c.moveToNext()) add(InboxMessage(c.getString(0).orEmpty(), c.getString(1).orEmpty(), c.getLong(2)))
+                    while (c.moveToNext()) add(InboxMessage(c.getString(0).orEmpty(), c.getString(1).orEmpty(), c.getLong(2), c.getLong(3).takeIf { it > 0 } ?: c.getLong(2)))
                 }
             } ?: emptyList()
         }
