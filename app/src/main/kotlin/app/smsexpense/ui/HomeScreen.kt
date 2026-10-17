@@ -1,6 +1,27 @@
 package app.smsexpense.ui
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import app.smsexpense.R
+import app.smsexpense.ui.theme.Haptics
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
@@ -82,18 +103,87 @@ fun HomeScreen(
 ) {
     val zone = ZoneId.systemDefault()
     val slotOf = categories.values.associate { it.name to it.slot }
-    LazyColumn(Modifier.safeDrawingPadding()) {
-        item {
-            Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.s, vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onPreviousMonth) { Text("‹ Prev") }
+    val haptics = LocalHapticFeedback.current
+    val reduce = reducedMotion()
+    val previous = { haptics.performHapticFeedback(Haptics.tick); onPreviousMonth() }
+    val next = onNextMonth?.let { go -> { haptics.performHapticFeedback(Haptics.tick); go() } }
+    // The old month keeps its own data while it slides out, so the outgoing screen never shows the new month's numbers.
+    val view = MonthView(month, summaries, transactions)
+
+    Column(Modifier.safeDrawingPadding()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.xs, vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = previous) {
+                Icon(painterResource(R.drawable.ic_chevron_left), contentDescription = "Previous month")
+            }
+            AnimatedContent(
+                month,
+                transitionSpec = { monthSlide(initialState, targetState, reduce) },
+                modifier = Modifier.weight(1f),
+                label = "month title",
+            ) { m ->
                 Text(
-                    month.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
+                    m.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
                     style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.weight(1f).padding(horizontal = Spacing.s),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().semantics { heading() },
                 )
-                TextButton(onClick = { onNextMonth?.invoke() }, enabled = onNextMonth != null) { Text("Next ›") }
+            }
+            IconButton(onClick = { next?.invoke() }, enabled = next != null) {
+                Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = "Next month")
             }
         }
+        AnimatedContent(
+            view,
+            transitionSpec = { monthSlide(initialState.month, targetState.month, reduce) },
+            contentKey = { it.month },
+            label = "month",
+            modifier = Modifier.fillMaxSize().testTag("month").pointerInput(next) {
+                var dx = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { dx = 0f },
+                    onHorizontalDrag = { _, amount -> dx += amount },
+                    onDragEnd = {
+                        when (swipeStep(dx, threshold = Spacing.xxxl.toPx())) {
+                            -1 -> previous()
+                            1 -> next?.invoke()
+                        }
+                    },
+                )
+            },
+        ) { v -> MonthList(v, categories, slotOf, banner, appNotificationsOffer, onOpen, today, zone) }
+    }
+}
+
+/** What one month's page shows. Passed whole to the slide, so the outgoing page keeps its own month's data. */
+private data class MonthView(val month: YearMonth, val summaries: List<CurrencyMonth>, val transactions: List<TransactionEntity>)
+
+/** A horizontal swipe longer than [threshold]: right goes back a month (-1), left goes forward (+1), shorter does nothing. */
+fun swipeStep(dragX: Float, threshold: Float): Int = when {
+    dragX > threshold -> -1
+    dragX < -threshold -> 1
+    else -> 0
+}
+
+/** A later month comes in from the right, an earlier one from the left, like turning pages. Nothing moves when animations are off. */
+private fun AnimatedContentTransitionScope<*>.monthSlide(from: YearMonth, to: YearMonth, reduce: Boolean): ContentTransform {
+    if (reduce) return EnterTransition.None togetherWith ExitTransition.None
+    val dir = if (to > from) 1 else -1
+    return (slideInHorizontally(Motion.default()) { it / 4 * dir } + fadeIn(Motion.effects())) togetherWith
+        (slideOutHorizontally(Motion.default()) { -it / 4 * dir } + fadeOut(Motion.effects()))
+}
+
+@Composable
+private fun MonthList(
+    v: MonthView,
+    categories: Map<Long, CategoryEntity>,
+    slotOf: Map<String, Int>,
+    banner: String?,
+    appNotificationsOffer: AppNotificationsOffer?,
+    onOpen: (TransactionEntity) -> Unit,
+    today: LocalDate,
+    zone: ZoneId,
+) {
+    LazyColumn(Modifier.fillMaxSize()) {
         if (banner != null) {
             item {
                 Surface(
@@ -106,7 +196,7 @@ fun HomeScreen(
             }
         }
         if (appNotificationsOffer != null) item { AppNotificationsCard(appNotificationsOffer) }
-        if (summaries.isEmpty()) {
+        if (v.summaries.isEmpty()) {
             item {
                 Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
                     Text("No payments this month yet", style = MaterialTheme.typography.titleMedium)
@@ -119,9 +209,9 @@ fun HomeScreen(
                 }
             }
         }
-        items(summaries, key = { it.currency }) { s -> MonthCard(s, slotOf) }
+        items(v.summaries, key = { it.currency }) { s -> MonthCard(s, slotOf) }
         // One header per day instead of a date on every row. The list arrives newest first, so groups keep that order.
-        transactions.groupBy { Instant.ofEpochMilli(it.occurredAt).atZone(zone).toLocalDate() }.forEach { (day, onDay) ->
+        v.transactions.groupBy { Instant.ofEpochMilli(it.occurredAt).atZone(zone).toLocalDate() }.forEach { (day, onDay) ->
             item(key = "day-$day") {
                 Text(
                     dayLabel(day, today),
