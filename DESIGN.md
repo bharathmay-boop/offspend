@@ -108,7 +108,7 @@ Haptics say what happened, never decorate. Use the tokens in `Haptics` through `
 
 ## Filing a payment
 
-On the category sheet one tap on a category files the payment. The app's guess is the first chip, labelled "Suggested". The note field sits behind an "Add note" chip. A Save button appears only while a note or a new category name is being typed, because then the tap is no longer the last step. A new category name can also be filed with the keyboard's Done key.
+On the category sheet the payment's category is one row with its icon and "Tap to change", because the guess is already filed and is usually right. Tapping the row opens every category as chips, the guess first and labelled "Suggested", and one tap on a chip files the payment. With no guess, the sheet offers the three categories used most (the first three for a new install) and "All categories" instead of the row. For a payee the app already knows, the open list also has a "Use my pick for every <payee> payment" switch, off by default. The note field sits behind an "Add note" chip. A Save button appears only while a note or a new category name is being typed, because then the tap is no longer the last step. A new category name can also be filed with the keyboard's Done key.
 
 ## Components
 

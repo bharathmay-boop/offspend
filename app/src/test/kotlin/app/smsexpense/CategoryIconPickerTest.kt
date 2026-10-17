@@ -57,6 +57,7 @@ class CategoryIconPickerTest {
 
     @Test fun aNewCategoryCanBeSavedWithAnIcon() {
         sheet()
+        compose.onNodeWithText("All categories").performClick()
         compose.onNodeWithText("+ New category").performClick()
         compose.onNodeWithTag("newCategory").performTextInput("Fitness")
         compose.onNodeWithContentDescription("Fitness icon").performScrollTo().performClick()
@@ -66,6 +67,7 @@ class CategoryIconPickerTest {
 
     @Test fun tappingThePickedIconAgainClearsIt() {
         sheet()
+        compose.onNodeWithText("All categories").performClick()
         compose.onNodeWithText("+ New category").performClick()
         compose.onNodeWithTag("newCategory").performTextInput("Pets")
         compose.onNodeWithContentDescription("Pets icon").performScrollTo().performClick().performClick()
