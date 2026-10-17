@@ -114,6 +114,7 @@ fun HomeScreen(
 ) {
     val zone = ZoneId.systemDefault()
     val slotOf = categories.values.associate { it.name to it.slot }
+    val iconOf = categories.values.associate { it.name to it.icon }
     val haptics = LocalHapticFeedback.current
     val reduce = reducedMotion()
     val previous = { haptics.performHapticFeedback(Haptics.tick); onPreviousMonth() }
@@ -173,7 +174,7 @@ fun HomeScreen(
                         },
                     )
                 },
-            ) { v -> MonthList(v, categories, slotOf, importing, appNotificationsOffer, onOpen, onReview, today, zone) }
+            ) { v -> MonthList(v, categories, slotOf, iconOf, importing, appNotificationsOffer, onOpen, onReview, today, zone) }
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
@@ -202,6 +203,7 @@ private fun MonthList(
     v: MonthView,
     categories: Map<Long, CategoryEntity>,
     slotOf: Map<String, Int>,
+    iconOf: Map<String, String?>,
     importing: Boolean,
     appNotificationsOffer: AppNotificationsOffer?,
     onOpen: (TransactionEntity) -> Unit,
@@ -231,7 +233,7 @@ private fun MonthList(
                 }
             }
         }
-        items(v.summaries, key = { it.currency }) { s -> MonthCard(s, slotOf) }
+        items(v.summaries, key = { it.currency }) { s -> MonthCard(s, slotOf, iconOf) }
         if (unfiled.isNotEmpty()) item(key = "review") { ReviewPrompt(unfiled.size, onReview = { onReview(unfiled) }, Modifier.animateItem()) }
         // One header per day instead of a date on every row. The list arrives newest first, so groups keep that order.
         v.transactions.groupBy { Instant.ofEpochMilli(it.occurredAt).atZone(zone).toLocalDate() }.forEach { (day, onDay) ->
@@ -249,6 +251,7 @@ private fun MonthList(
                     merchant = tx.merchant?.let(::displayMerchant) ?: tx.accountLast4?.let { "Account ··$it" } ?: "Unknown payee",
                     category = category?.name,
                     categorySlot = category?.slot ?: -1,
+                    categoryIcon = category?.icon,
                     amount = tx.amount,
                     currency = tx.currency,
                     direction = tx.direction,
@@ -269,7 +272,7 @@ fun glance(totals: List<CategoryTotal>, top: Int = 4): Glance =
 
 /** One currency's month at a glance: the total, one bar split by category, and the top categories. The full list is one tap away. */
 @Composable
-fun MonthCard(s: CurrencyMonth, slotOf: Map<String, Int>) {
+fun MonthCard(s: CurrencyMonth, slotOf: Map<String, Int>, iconOf: Map<String, String?> = emptyMap()) {
     var expanded by rememberSaveable(s.currency) { mutableStateOf(false) }
     val g = glance(s.spentByCategory)
     val slot = { c: CategoryTotal -> c.category?.let { slotOf[it] } ?: -1 }
@@ -299,7 +302,7 @@ fun MonthCard(s: CurrencyMonth, slotOf: Map<String, Int>) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     g.shown.forEach { c ->
                         CategoryPill(c.category ?: "Needs a category", formatMoney(c.amount, s.currency, whole = true), onClick = { expanded = true }) {
-                            CategoryIcon(c.category, slot(c), size = CategoryIconSize.small)
+                            CategoryIcon(c.category, slot(c), size = CategoryIconSize.small, icon = c.category?.let(iconOf::get))
                         }
                     }
                     if (g.other.signum() > 0) {
@@ -312,7 +315,7 @@ fun MonthCard(s: CurrencyMonth, slotOf: Map<String, Int>) {
                     val largest = s.spentByCategory.first().amount
                     s.spentByCategory.forEach { c ->
                         val share = if (largest.signum() == 0) 0f else c.amount.toFloat() / largest.toFloat()
-                        CategoryBar(c.category, slot(c), share, formatMoney(c.amount, s.currency))
+                        CategoryBar(c.category, slot(c), share, formatMoney(c.amount, s.currency), c.category?.let(iconOf::get))
                     }
                     TextButton(onClick = { expanded = false }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Show less") }
                 }
@@ -389,11 +392,11 @@ private fun countingAmount(target: BigDecimal): BigDecimal {
 }
 
 @Composable
-private fun CategoryBar(category: String?, slot: Int, share: Float, amount: String) {
+private fun CategoryBar(category: String?, slot: Int, share: Float, amount: String, icon: String? = null) {
     val width by animateFloatAsState(share.coerceIn(0.02f, 1f), animationSpec = Motion.default(), label = "bar")
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.semantics(mergeDescendants = true) {}) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            CategoryIcon(category, slot, size = CategoryIconSize.small)
+            CategoryIcon(category, slot, size = CategoryIconSize.small, icon = icon)
             Text(category ?: "Needs a category", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             Text(amount, style = AppTheme.type.amountRow)
         }
