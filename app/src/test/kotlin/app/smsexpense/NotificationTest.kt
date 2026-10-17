@@ -64,6 +64,18 @@ class NotificationTest {
         assertTrue(notifications.isEmpty())
     }
 
+    @Test fun aBlankReplyLeavesAnExistingNoteAlone() = runTest {
+        val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 6_000L)!!
+        app.ledger.setNote(id, "Team lunch")
+        val intent = Intent(TransactionNotifier.ACTION_NOTE)
+        RemoteInput.addResultsToIntent(
+            arrayOf(RemoteInput.Builder(TransactionNotifier.KEY_NOTE).build()), intent,
+            Bundle().apply { putCharSequence(TransactionNotifier.KEY_NOTE, "   ") },
+        )
+        NotificationActionReceiver.handle(app, intent, id)
+        assertEquals("Team lunch", app.db.transactions().byId(id)!!.note)
+    }
+
     @Test fun aReplyFromTheNotificationIsSavedAsTheNote() = runTest {
         val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 5_000L)!!
         val intent = Intent(TransactionNotifier.ACTION_NOTE)

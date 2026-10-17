@@ -33,7 +33,8 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 }
                 TransactionNotifier.ACTION_NOTE -> {
                     val note = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(TransactionNotifier.KEY_NOTE)
-                    app.ledger.setNote(txId, note?.toString())
+                    // A blank reply is not a request to delete a note; clearing one is done on the category sheet.
+                    if (!note.isNullOrBlank()) app.ledger.setNote(txId, note.toString())
                     // Re-post so the reply spinner stops and the note is acknowledged.
                     app.db.transactions().byId(txId)?.let { tx ->
                         val category = tx.categoryId?.let { id -> app.db.categories().all().firstOrNull { it.id == id } }
