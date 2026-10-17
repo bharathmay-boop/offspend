@@ -11,7 +11,8 @@ object TransactionFilter {
     private val personalSender = Regex("""^\+?\d{10,}$|^\+\d+X+$""")
 
     private val otp = r("""\bOTP\b|one[- ]time password|verification code""")
-    private val reversedCredit = r("""(has been|have been) reversed|reversed to your|\brefund\b""")
+    // Money that already came back. "Refund will be processed" is only a promise, so it doesn't count (#152).
+    private val reversedCredit = r("""(has been|have been) (reversed|refunded)|(reversed|refunded) to your""")
     private val failed = r("""\b(failed|declined|unsuccessful|could not be completed)\b""")
     private val upcoming = r("""will be (debited|charged|deducted)|autopay mandate|mandate .*\b(created|registered)\b""")
     private val request = r("""has requested|\brequested (rs|inr|₹)|collect request""")
@@ -22,7 +23,7 @@ object TransactionFilter {
 
     /** Words that only appear when money moved. */
     val movementVerb = r(
-        """\b(debited|credited|deposited|spent|sent|paid|received|withdrawn|reversed|refund|purchase|charged)\b""" +
+        """\b(debited|credited|deposited|spent|sent|paid|received|withdrawn|reversed|refund|refunded|purchase|charged)\b""" +
             """|\bDr\.|\bDR\b|was used for|transaction was made|done at ATM""",
     )
 

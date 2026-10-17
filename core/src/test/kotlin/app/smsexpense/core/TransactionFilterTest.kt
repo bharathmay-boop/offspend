@@ -21,4 +21,20 @@ class TransactionFilterTest {
     @Test fun aReversalAfterAFailedPaymentIsStillMoney() {
         assertNull(TransactionFilter.check(Source.SMS, "JD-ICICIT", "Rs.450.00 has been reversed to your A/c XX567 for failed UPI txn"))
     }
+
+    // #152: a promise of a refund is not money back.
+    @Test fun aFailedPaymentThatOnlyPromisesARefundIsSkipped() {
+        assertEquals(
+            IgnoreReason.FAILED,
+            TransactionFilter.check(Source.SMS, "AD-HDFCBK", "Your payment of Rs 500 failed. Refund, if debited, will be processed in 5 days"),
+        )
+        assertEquals(
+            IgnoreReason.FAILED,
+            TransactionFilter.check(Source.SMS, "AD-HDFCBK", "Your payment of Rs 500 failed. Any amount debited will be refunded in 5 days"),
+        )
+    }
+
+    @Test fun aRefundCreditedAfterAFailedPaymentIsStillMoney() {
+        assertNull(TransactionFilter.check(Source.SMS, "AD-HDFCBK", "Rs 500 refunded to your A/c XX1234 for failed UPI txn"))
+    }
 }
