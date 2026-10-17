@@ -152,6 +152,12 @@ class Ledger(
         db.transactions().update(tx.copy(merchant = clearest, categoryId = guess?.id ?: tx.categoryId))
     }
 
+    /** True when this payment's payee has been filed under its category before, so the notification can just say "Okay". */
+    suspend fun filedBefore(tx: TransactionEntity): Boolean {
+        val merchant = tx.merchant ?: return false
+        return tx.categoryId != null && db.merchantRules().byKey(Categorizer.merchantKey(merchant))?.categoryId == tx.categoryId
+    }
+
     /** True when the app has been taught a category for this payee. */
     suspend fun knowsPayee(merchant: String?): Boolean =
         merchant != null && db.merchantRules().byKey(Categorizer.merchantKey(merchant)) != null

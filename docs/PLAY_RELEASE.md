@@ -23,7 +23,7 @@ Play Console, App content, Sensitive permissions. The app requests `READ_SMS` an
 
 **Prominent disclosure:** the permission screen (`ui/PermissionScreen.kt`) is the first screen a new user sees, before Android's own prompt. Without any tap it says that the app reads SMS to find bank payments, that OTPs and personal messages are skipped, and that nothing leaves the phone. The fuller list (what is kept, the 3 month import, no internet) is under "What does it read?" on the same screen. Keep the visible sentence if the screen is redesigned again, since Play requires the disclosure in normal use.
 
-**Demo video:** Play asks for a short video showing the feature. Record: install, permission screen, grant, a bank SMS arriving, the notification, tapping "Looks right", the monthly view. The walkthrough video made for the README can be reused.
+**Demo video:** Play asks for a short video showing the feature. Record: install, permission screen, grant, a bank SMS arriving, the notification, tapping "Yes, Food", the monthly view. The walkthrough video made for the README can be reused.
 
 **Possible questions from review and the answer:**
 
