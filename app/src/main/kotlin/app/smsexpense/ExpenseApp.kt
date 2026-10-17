@@ -110,6 +110,11 @@ class ExpenseApp : Application() {
         val id = ledger.record(source, sender, body, receivedAt) ?: return null
         if (notify) {
             val tx = db.transactions().byId(id) ?: return id
+            if (tx.deleted) {
+                // Filed hidden as the twin of a hand-added entry: ask instead of showing a new payment.
+                ledger.handAddedTwinOf(tx)?.let { TransactionNotifier.showSamePayment(this, tx, it) }
+                return id
+            }
             val category = tx.categoryId?.let { cid -> db.categories().all().firstOrNull { it.id == cid } }
             TransactionNotifier.show(this, tx, category)
         }

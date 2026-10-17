@@ -7,7 +7,7 @@ import androidx.core.app.RemoteInput
 import app.smsexpense.ExpenseApp
 import kotlinx.coroutines.launch
 
-/** Handles "Looks right" and "Add note" straight from the notification, without opening the app. */
+/** Handles the notification's buttons (Looks right, Add note, and Same payment? Yes or No) without opening the app. */
 class NotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val txId = intent.getLongExtra(TransactionNotifier.EXTRA_TX, -1)
@@ -30,6 +30,15 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     val categoryId = intent.getLongExtra(TransactionNotifier.EXTRA_CATEGORY, -1)
                     if (categoryId >= 0) app.ledger.setCategory(txId, categoryId)
                     TransactionNotifier.dismiss(app, txId)
+                }
+                TransactionNotifier.ACTION_SAME -> TransactionNotifier.dismiss(app, txId)
+                TransactionNotifier.ACTION_SEPARATE -> {
+                    // Not the same payment: show the bank's copy and ask for its category like any new payment.
+                    app.ledger.restore(txId)
+                    app.db.transactions().byId(txId)?.let { tx ->
+                        val category = tx.categoryId?.let { id -> app.db.categories().all().firstOrNull { it.id == id } }
+                        TransactionNotifier.show(app, tx, category)
+                    }
                 }
                 TransactionNotifier.ACTION_NOTE -> {
                     val note = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(TransactionNotifier.KEY_NOTE)

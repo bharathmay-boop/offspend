@@ -41,6 +41,8 @@ class Ledger(
             reading.merchant?.let { db.transactions().fillMerchant(twin.id, it) }
             return null
         }
+        // Added by hand earlier? File the bank's copy hidden and ask whether it's the same payment (#53).
+        val handAdded = handAddedMatch(reading, receivedAt)
         val guess = guessCategory(reading.merchant, reading.direction)
         val id = db.transactions().insert(
             TransactionEntity(
@@ -54,10 +56,34 @@ class Ledger(
                 note = null,
                 source = source.name,
                 fingerprint = fingerprint(source, sender, body, receivedAt),
+                deleted = handAdded != null,
             ),
         )
-        return id.takeIf { it != -1L }
+        if (id == -1L) return null
+        if (handAdded != null) {
+            // Matched once only, and it gains the account the bank named.
+            db.transactions().update(
+                handAdded.copy(fingerprint = "manual-matched-${handAdded.fingerprint.removePrefix("manual-")}", accountLast4 = handAdded.accountLast4 ?: reading.account),
+            )
+        }
+        return id
     }
+
+    /**
+     * A hand-added entry from the day before up to an hour after the bank's message, with the same direction, amount
+     * and currency, not matched yet. Two genuine equal payments are common (two ₹20 teas), so this only proposes;
+     * the notification asks.
+     */
+    private suspend fun handAddedMatch(reading: SmsReading.Transaction, at: Long): TransactionEntity? =
+        db.transactions()
+            .unmatchedHandAdded(reading.direction, reading.money.currency, at - HAND_ADDED_BEFORE_MS, at + HAND_ADDED_AFTER_MS)
+            .firstOrNull { it.amount.compareTo(reading.money.amount) == 0 }
+
+    /** The hand-added entry a hidden bank entry was matched with, for the notification. */
+    suspend fun handAddedTwinOf(bank: TransactionEntity): TransactionEntity? =
+        db.transactions()
+            .fromOtherSourcesNear(bank.direction, bank.currency, bank.source, bank.occurredAt - HAND_ADDED_BEFORE_MS, bank.occurredAt + HAND_ADDED_AFTER_MS)
+            .firstOrNull { it.source == MANUAL && it.fingerprint.startsWith("manual-matched-") && it.amount.compareTo(bank.amount) == 0 }
 
     /**
      * The bank SMS and the payment app's notification often both report one payment.
@@ -67,7 +93,8 @@ class Ledger(
     private suspend fun sameTransactionFromOtherSource(reading: SmsReading.Transaction, source: Source, at: Long): TransactionEntity? =
         db.transactions()
             .fromOtherSourcesNear(reading.direction, reading.money.currency, source.name, at - TWIN_WINDOW_MS, at + TWIN_WINDOW_MS)
-            .firstOrNull { it.amount.compareTo(reading.money.amount) == 0 }
+            // Hand-added entries are never merged silently; they get asked about instead (#53).
+            .firstOrNull { it.source != MANUAL && it.amount.compareTo(reading.money.amount) == 0 }
 
     private fun fingerprint(source: Source, sender: String, body: String, receivedAt: Long): String =
         MessageDigest.getInstance("SHA-256")
@@ -160,5 +187,7 @@ class Ledger(
         /** The source of an entry the person typed in. */
         const val MANUAL = "MANUAL"
         private const val TWIN_WINDOW_MS = 10 * 60 * 1000L
+        private const val HAND_ADDED_BEFORE_MS = 24 * 60 * 60 * 1000L
+        private const val HAND_ADDED_AFTER_MS = 60 * 60 * 1000L
     }
 }
