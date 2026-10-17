@@ -1,6 +1,7 @@
 package app.smsexpense
 
 import android.app.Application
+import android.util.Log
 import app.smsexpense.capture.InboxImporter
 import app.smsexpense.capture.InboxMessage
 import app.smsexpense.capture.OnDeviceModel
@@ -8,6 +9,8 @@ import app.smsexpense.capture.TransactionNotifier
 import app.smsexpense.core.Source
 import app.smsexpense.data.AppDatabase
 import app.smsexpense.data.Ledger
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,12 +22,15 @@ class ExpenseApp : Application() {
     // ponytail: one database and ledger on the Application, add DI if the graph grows
     val db: AppDatabase by lazy { AppDatabase.create(this) }
     val ledger: Ledger by lazy { Ledger(db, model = OnDeviceModel::read) }
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // A failure in background capture must never crash the app. Only the exception type is logged, never message text.
+    private val contained = CoroutineExceptionHandler { _, e -> Log.w("ExpenseApp", "background work failed: ${e.javaClass.simpleName}") }
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + contained)
 
     sealed interface History {
         data object NotStarted : History
         data object Reading : History
         data class Done(val found: Int) : History
+        data object Failed : History
     }
 
     private val _history = MutableStateFlow<History>(History.NotStarted)
@@ -33,18 +39,41 @@ class ExpenseApp : Application() {
     private val prefs by lazy { getSharedPreferences("capture", MODE_PRIVATE) }
 
     /** On first setup, files the last 90 days of bank messages so the first screen already has history. */
-    fun importHistoryOnce() {
-        if (prefs.getBoolean(KEY_HISTORY_DONE, false) || _history.value == History.Reading) return
-        _history.value = History.Reading
-        scope.launch {
-            val since = System.currentTimeMillis() - InboxImporter.HISTORY_DAYS * 24 * 60 * 60 * 1000
-            val found = InboxImporter(InboxImporter.systemInbox(this@ExpenseApp)) { s, from, body, at ->
-                onMessage(s, from, body, at, notify = false)
-            }.importSince(since)
-            prefs.edit().putBoolean(KEY_HISTORY_DONE, true).putLong(KEY_LAST_SEEN, System.currentTimeMillis()).apply()
-            _history.value = History.Done(found)
+    fun importHistoryOnce(readInbox: (Long) -> List<InboxMessage> = InboxImporter.systemInbox(this)) {
+        // Claimed before returning: the permission callback and the home screen can both call this at once.
+        if (claimHistory()) scope.launch { readHistory(readInbox) }
+    }
+
+    internal suspend fun importHistory(readInbox: (Long) -> List<InboxMessage>) {
+        if (claimHistory()) readHistory(readInbox)
+    }
+
+    private fun claimHistory(): Boolean {
+        if (prefs.getBoolean(KEY_HISTORY_DONE, false)) return false
+        while (true) {
+            val now = _history.value
+            if (now == History.Reading) return false
+            if (_history.compareAndSet(now, History.Reading)) return true
         }
     }
+
+    private suspend fun readHistory(readInbox: (Long) -> List<InboxMessage>) {
+        try {
+            val since = System.currentTimeMillis() - InboxImporter.HISTORY_DAYS * 24 * 60 * 60 * 1000
+            val found = InboxImporter(readInbox) { s, from, body, at -> onMessage(s, from, body, at, notify = false) }.importSince(since)
+            prefs.edit().putBoolean(KEY_HISTORY_DONE, true).putLong(KEY_LAST_SEEN, System.currentTimeMillis()).apply()
+            _history.value = History.Done(found)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Not marked done, so the next launch tries again.
+            _history.value = History.Failed
+        }
+    }
+
+    /** Files each message on its own, so one that fails does not stop the rest. */
+    suspend fun onMessages(source: Source, messages: List<InboxMessage>) =
+        eachContained(messages) { onMessage(source, it.sender, it.body, it.receivedAt) }
 
     /**
      * Some phones stop background apps, so an SMS can arrive without the app seeing it.
@@ -87,5 +116,18 @@ class ExpenseApp : Application() {
     private companion object {
         const val KEY_HISTORY_DONE = "history_done"
         const val KEY_LAST_SEEN = "last_seen_sms"
+    }
+}
+
+/** Runs [block] for every item; one that throws is logged by type and skipped, and the rest still run. */
+internal suspend fun <T> eachContained(items: List<T>, block: suspend (T) -> Unit) {
+    for (item in items) {
+        try {
+            block(item)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("ExpenseApp", "could not file a message: ${e.javaClass.simpleName}")
+        }
     }
 }
