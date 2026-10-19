@@ -40,12 +40,12 @@ class CategorySheetTest {
 
     private var skipped = 0
 
-    private fun show(initialCategory: Long?, maxHeight: Int = 2000, initialNote: String? = null, canSkip: Boolean = false, knownPayee: Boolean = false, mostUsed: List<Long> = emptyList()) = compose.setContent {
+    private fun show(initialCategory: Long?, maxHeight: Int = 2000, initialNote: String? = null, canSkip: Boolean = false, knownPayee: Boolean = false, mostUsed: List<Long> = emptyList(), merchant: String? = "CALIFORNIA BURRITO", handAdded: Boolean = false) = compose.setContent {
         ExpenseTheme {
             Box(Modifier.height(maxHeight.dp)) {
             CategorySheet(
                 amount = BigDecimal("320.00"), currency = "INR", direction = Direction.DEBIT,
-                merchant = "CALIFORNIA BURRITO", detail = "8 Oct · Account ••1234",
+                merchant = merchant, detail = "8 Oct · Account ••1234", handAdded = handAdded,
                 categories = categories, initialCategoryId = initialCategory, initialNote = initialNote,
                 onSave = { saved = it }, onSkip = if (canSkip) ({ skipped++ }) else null, knownPayee = knownPayee, mostUsed = mostUsed,
             )
@@ -68,6 +68,17 @@ class CategorySheetTest {
         compose.onNodeWithText("California Burrito").assertExists()
         // TalkBack reads the whole amount with its direction, not just the symbols.
         compose.onNodeWithContentDescription("Paid ₹320.00").assertExists()
+    }
+
+    // #179: there was no message for a payment the person typed in.
+    @Test fun aHandAddedPaymentWithNoPayeeSaysNoneWasAdded() {
+        show(1, merchant = null, handAdded = true)
+        compose.onNodeWithText("No payee added").assertExists()
+    }
+
+    @Test fun aBankPaymentWithNoPayeeSaysTheMessageDidNotNameOne() {
+        show(1, merchant = null)
+        compose.onNodeWithText("Payee not named in the message").assertExists()
     }
 
     // One tap files it (#58): no Save to find in the common case.

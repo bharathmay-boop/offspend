@@ -69,9 +69,13 @@ class Ledger(
         // "Yes, same" needs no tap, so the bank's sighting confirms the hand-added payment until the person says otherwise (#171).
         db.sightings().insert(seen(handAdded?.id ?: id))
         if (handAdded != null) {
-            // Matched once only, and it gains the account the bank named.
+            // Matched once only, and it gains the account and, if none was typed, the payee the bank named (#179).
             db.transactions().update(
-                handAdded.copy(fingerprint = "manual-matched-${handAdded.fingerprint.removePrefix("manual-")}", accountLast4 = handAdded.accountLast4 ?: reading.account),
+                handAdded.copy(
+                    fingerprint = "manual-matched-${handAdded.fingerprint.removePrefix("manual-")}",
+                    accountLast4 = handAdded.accountLast4 ?: reading.account,
+                    merchant = handAdded.merchant ?: reading.merchant,
+                ),
             )
         }
         return id
@@ -224,6 +228,11 @@ class Ledger(
     /** "No, add it" on the same-payment question: the bank's copy becomes its own payment and takes its sighting back. */
     suspend fun keepSeparate(bankCopyId: Long) {
         val bank = db.transactions().byId(bankCopyId) ?: return
+        // Not the same payment, so a payee filled in from the bank's text goes back with it (#179).
+        handAddedTwinOf(bank)?.let { manual ->
+            val typed = db.sightings().forTransaction(manual.id).firstOrNull { it.source == MANUAL }?.merchant
+            if (typed == null && manual.merchant == bank.merchant) db.transactions().update(manual.copy(merchant = null))
+        }
         restore(bankCopyId)
         db.sightings().moveTo(bank.fingerprint, bankCopyId)
     }
