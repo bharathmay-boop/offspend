@@ -52,6 +52,25 @@ class PaymentListTest {
         assertEquals("swiggy@icici", displayMerchant("swiggy@icici"))
     }
 
+    // A row with no payee names the account in the app's one style, "••1234" (#180).
+    @Test fun aRowWithNoPayeeShowsTheAccountDigits() {
+        val tx = TransactionEntity(
+            id = 1, direction = Direction.DEBIT, amount = BigDecimal("100.00"), currency = "INR", merchant = null, accountLast4 = "1234",
+            occurredAt = today.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+            categoryId = null, note = null, source = "SMS", fingerprint = "f1",
+        )
+        compose.setContent {
+            ExpenseTheme {
+                HomeScreen(
+                    month = YearMonth.of(2026, 10), summaries = emptyList(), transactions = listOf(tx),
+                    categories = emptyMap(), importing = false, notice = null, onNoticeShown = {}, appNotificationsOffer = null,
+                    onPreviousMonth = {}, onNextMonth = null, onOpen = {}, onReview = {}, onAdd = {}, today = today,
+                )
+            }
+        }
+        compose.onNodeWithText("Account ••1234").assertExists()
+    }
+
     @Test fun paymentsAreGroupedUnderOneHeaderPerDay() {
         val zone = ZoneId.systemDefault()
         fun at(day: LocalDate, id: Long, merchant: String) = TransactionEntity(
