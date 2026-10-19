@@ -75,7 +75,8 @@ class CategorySheetActivity : ComponentActivity() {
                             merchant = current.merchant,
                             detail = listOfNotNull(
                                 DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(current.occurredAt)),
-                                current.accountLast4?.let { "Account ··$it" },
+                                // "Where this came from" names the account when it shows, so it isn't said twice (#180).
+                                current.accountLast4?.takeIf { sources.isEmpty() }?.let { "Account ••$it" },
                             ).joinToString(" · "),
                             categories = categories,
                             initialCategoryId = current.categoryId,

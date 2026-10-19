@@ -86,7 +86,7 @@ private fun DesignSystemScreen(dark: Boolean, onDark: (Boolean) -> Unit) {
             Text("Screen title", style = MaterialTheme.typography.headlineSmall)
             Text("California Burrito", style = MaterialTheme.typography.titleMedium)
             Text("Body text reads like this, at the size most of the app uses.", style = MaterialTheme.typography.bodyLarge)
-            Text("8 Oct · HDFC Bank ··1234", style = MaterialTheme.typography.labelMedium)
+            Text("8 Oct · HDFC Bank ••1234", style = MaterialTheme.typography.labelMedium)
         }
 
         Section("Shape") {
@@ -116,7 +116,7 @@ private fun DesignSystemScreen(dark: Boolean, onDark: (Boolean) -> Unit) {
                 Column {
                     TransactionRow("California Burrito", "Food", 0, BigDecimal("320"), "INR", Direction.DEBIT)
                     TransactionRow("ACME TECHNOLOGIES PVT LTD", "Salary", 5, BigDecimal("125000"), "INR", Direction.CREDIT)
-                    TransactionRow("PNB ··3210", null, 99, BigDecimal("400"), "INR", Direction.DEBIT)
+                    TransactionRow("PNB ••3210", null, 99, BigDecimal("400"), "INR", Direction.DEBIT)
                 }
             }
             PrivacyNote()
