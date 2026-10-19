@@ -3,6 +3,7 @@ package app.smsexpense
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -35,6 +36,8 @@ class CategorySheetActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The pre-Material translucent theme doesn't set this, so Android painted its own black status bar (#73).
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val app = application as ExpenseApp
