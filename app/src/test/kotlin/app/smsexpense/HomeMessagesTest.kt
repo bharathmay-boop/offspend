@@ -3,13 +3,16 @@ package app.smsexpense
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import app.smsexpense.ui.AppNotificationsOffer
 import app.smsexpense.ui.HomeScreen
 import app.smsexpense.ui.theme.ExpenseTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -87,5 +90,16 @@ class HomeMessagesTest {
         show(offer = AppNotificationsOffer(onTurnOn = {}, onNotNow = {}))
         compose.onNodeWithText("Small UPI payments often skip the SMS.").assertExists()
         compose.onNodeWithText("Google Pay", substring = true).assertDoesNotExist()
+    }
+
+    // The Add button and a showing snackbar don't cover each other (#99).
+    @Test fun theAddButtonStaysClearOfTheSnackbar() {
+        compose.mainClock.autoAdvance = false
+        show(notice = "Filed 9 payments from the last 3 months.")
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.onNodeWithText("Filed 9 payments from the last 3 months.").assertExists()
+        val bar = compose.onNodeWithTag("snackbar").getBoundsInRoot()
+        val add = compose.onNodeWithContentDescription("Add a payment").getBoundsInRoot()
+        assertTrue("Add $add overlaps the snackbar $bar", add.bottom <= bar.top || add.top >= bar.bottom)
     }
 }

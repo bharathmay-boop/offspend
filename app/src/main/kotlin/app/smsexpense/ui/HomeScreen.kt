@@ -47,6 +47,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,6 +59,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -151,8 +153,22 @@ fun HomeScreen(
         onNoticeShown()
     }
 
-    Box(Modifier.safeDrawingPadding()) {
-        Column {
+    // A Scaffold stacks a showing snackbar above the Add button, so neither covers the other (#99).
+    Scaffold(
+        modifier = Modifier.safeDrawingPadding(),
+        contentWindowInsets = WindowInsets(0),
+        snackbarHost = { SnackbarHost(snackbar, Modifier.testTag("snackbar")) },
+        // The one floating button on the screen, where the thumb is (#51).
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onAdd,
+                icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = null) },
+                text = { Text("Add") },
+                modifier = Modifier.semantics { contentDescription = "Add a payment" },
+            )
+        },
+    ) { padding ->
+        Column(Modifier.padding(padding)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.xs, vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = previous) {
                     Icon(painterResource(R.drawable.ic_chevron_left), contentDescription = "Previous month")
@@ -194,14 +210,6 @@ fun HomeScreen(
                 },
             ) { v -> MonthList(v, categories, slotOf, iconOf, importing, appNotificationsOffer, onOpen, onReview, today, zone) }
         }
-        // The one floating button on the screen, where the thumb is (#51).
-        ExtendedFloatingActionButton(
-            onClick = onAdd,
-            icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = null) },
-            text = { Text("Add") },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.l).semantics { contentDescription = "Add a payment" },
-        )
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 }
 
