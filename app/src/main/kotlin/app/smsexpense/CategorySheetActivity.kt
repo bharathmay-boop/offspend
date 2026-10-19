@@ -20,6 +20,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import app.smsexpense.capture.TransactionNotifier
+import app.smsexpense.data.Ledger
 import app.smsexpense.data.TransactionEntity
 import app.smsexpense.ui.CategorySheet
 import app.smsexpense.ui.Provenance
@@ -79,6 +80,7 @@ class CategorySheetActivity : ComponentActivity() {
                             knownPayee = knownPayee,
                             mostUsed = mostUsed,
                             sources = sources,
+                            handAdded = current.source == Ledger.MANUAL,
                             progress = if (queue.size > 1) "${index + 1} of ${queue.size}" else null,
                             // Skip leaves the payment as it is: no category, no note, nothing learned.
                             onSkip = if (reviewing) ({

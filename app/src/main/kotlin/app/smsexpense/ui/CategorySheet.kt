@@ -109,6 +109,8 @@ fun CategorySheet(
     mostUsed: List<Long> = emptyList(),
     /** "Where this came from": one line per source that reported the payment (#171). */
     sources: List<SourceLine> = emptyList(),
+    /** Typed in by the person, so a missing payee wasn't left out of any message (#179). */
+    handAdded: Boolean = false,
 ) {
     var menu by remember { mutableStateOf(false) }
     var alwaysUse by rememberSaveable { mutableStateOf(false) }
@@ -176,7 +178,7 @@ fun CategorySheet(
                 }
             }
             AmountText(amount, currency, direction, style = AppTheme.type.amountHero)
-            Text(merchant?.let(::displayMerchant) ?: "Payee not named in the message", style = MaterialTheme.typography.titleMedium)
+            Text(merchant?.let(::displayMerchant) ?: if (handAdded) "No payee added" else "Payee not named in the message", style = MaterialTheme.typography.titleMedium)
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
