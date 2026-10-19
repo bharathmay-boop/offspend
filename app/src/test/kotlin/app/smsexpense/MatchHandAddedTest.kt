@@ -38,8 +38,8 @@ class MatchHandAddedTest {
         app.ledger.seedDefaultCategories()
     }
 
-    private suspend fun addByHand(at: Long, amount: String = "420") = app.ledger.addByHand(
-        AddResult(Direction.DEBIT, BigDecimal(amount), "INR", "Swiggy", null, Instant.ofEpochMilli(at).atZone(zone).toLocalDate(), ""),
+    private suspend fun addByHand(at: Long, amount: String = "420", payee: String? = "Swiggy") = app.ledger.addByHand(
+        AddResult(Direction.DEBIT, BigDecimal(amount), "INR", payee, null, Instant.ofEpochMilli(at).atZone(zone).toLocalDate(), ""),
         now = at,
     )
 
@@ -93,5 +93,26 @@ class MatchHandAddedTest {
         addByHand(t0, amount = "400")
         app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)
         assertEquals(2, visible().size)
+    }
+
+    // #179: the bank named the payee the person left out, so the payment takes it.
+    @Test fun aMatchingBankTextFillsInAMissingPayee() = runTest {
+        val manual = addByHand(t0, payee = null)
+        app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)
+        assertEquals("SWIGGY", app.db.transactions().byId(manual)!!.merchant)
+    }
+
+    @Test fun aPayeeThePersonTypedIsNeverReplaced() = runTest {
+        val manual = addByHand(t0, payee = "Lunch with Ravi")
+        app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)
+        assertEquals("Lunch with Ravi", app.db.transactions().byId(manual)!!.merchant)
+    }
+
+    // "No, add it": not the same payment, so the bank's payee goes back with the bank's copy.
+    @Test fun noAddItTakesTheFilledInPayeeBack() = runTest {
+        val manual = addByHand(t0, payee = null)
+        val bank = app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)!!
+        NotificationActionReceiver.handle(app, Intent(TransactionNotifier.ACTION_SEPARATE), bank)
+        assertEquals(null, app.db.transactions().byId(manual)!!.merchant)
     }
 }
