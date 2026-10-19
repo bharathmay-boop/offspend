@@ -274,7 +274,7 @@ private fun MonthList(
             items(onDay, key = { it.id }) { tx ->
                 val category = tx.categoryId?.let(categories::get)
                 TransactionRow(
-                    merchant = tx.merchant?.let(::displayMerchant) ?: tx.accountLast4?.let { "Account ··$it" } ?: "Unknown payee",
+                    merchant = tx.merchant?.let(::displayMerchant) ?: tx.accountLast4?.let { "Account ••$it" } ?: "Unknown payee",
                     category = category?.name,
                     categorySlot = category?.slot ?: -1,
                     categoryIcon = category?.icon,

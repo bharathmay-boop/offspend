@@ -45,7 +45,7 @@ class CategorySheetTest {
             Box(Modifier.height(maxHeight.dp)) {
             CategorySheet(
                 amount = BigDecimal("320.00"), currency = "INR", direction = Direction.DEBIT,
-                merchant = "CALIFORNIA BURRITO", detail = "8 Oct · Account ··1234",
+                merchant = "CALIFORNIA BURRITO", detail = "8 Oct · Account ••1234",
                 categories = categories, initialCategoryId = initialCategory, initialNote = initialNote,
                 onSave = { saved = it }, onSkip = if (canSkip) ({ skipped++ }) else null, knownPayee = knownPayee, mostUsed = mostUsed,
             )
