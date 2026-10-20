@@ -17,7 +17,7 @@ data class SourceLine(val text: String, val payee: String?)
 object Provenance {
     /**
      * @param paymentSource the payment's own source. A hand-added payment that a bank later reported says
-     *   "Confirmed by HDFC Bank text".
+     *   "Matched with HDFC Bank text"; the sender isn't verified, so it never says the bank confirmed it (#194).
      * @param appName the installed app's name for a package, or null.
      */
     fun lines(
@@ -33,11 +33,11 @@ object Provenance {
             val who = when (s.source) {
                 "MANUAL" -> "Added by you"
                 "NOTIFICATION" -> "${s.sender?.let { appName(it) ?: KNOWN_APPS[it] } ?: "Payment app"} alert"
-                else -> "${s.sender?.let(::bankName) ?: "Bank"} text"
+                else -> s.sender?.let { id -> bankName(id)?.let { "$it text" } ?: "Text from $id" } ?: "Bank text"
             }
             val confirmed = paymentSource == "MANUAL" && s.source != "MANUAL"
             val parts = listOfNotNull(
-                if (confirmed) "Confirmed by $who" else who,
+                if (confirmed) "Matched with ${who.replace("Text from", "a text from")}" else who,
                 s.accountLast4?.let { "a/c ••$it" },
                 time.format(Instant.ofEpochMilli(s.seenAt)),
             )
@@ -52,11 +52,18 @@ object Provenance {
         else -> "Seen $sightings times, counted once"
     }
 
-    /** "VM-HDFCBK" becomes "HDFC Bank". An ID we don't know is shown without its prefix, like "XYZBNK". */
-    fun bankName(sender: String): String {
-        val id = sender.substringAfterLast('-').uppercase()
+    /**
+     * "VM-HDFCBK" becomes "HDFC Bank". An ID we don't know is shown without its prefix, like "XYZBNK".
+     * Only the registered header shape (operator, '-', six-character header, optional '-S' style suffix) gets a
+     * name; anyone can send as "HDFC" or "HDFCBK", so those get null and are shown as they are (#194).
+     */
+    // ponytail: the shape narrows spoofing, it doesn't authenticate; the label stays "HDFC Bank text", not "from HDFC Bank"
+    fun bankName(sender: String): String? {
+        val id = HEADER.matchEntire(sender.uppercase())?.groupValues?.get(1) ?: return null
         return BANKS.entries.firstOrNull { (prefix, _) -> id.startsWith(prefix) }?.value ?: id
     }
+
+    private val HEADER = Regex("[A-Z]{2}-([A-Z0-9]{6})(-[A-Z])?")
 
     // ponytail: the common Indian bank sender IDs; unknown ones fall back to the ID itself
     private val BANKS = linkedMapOf(
