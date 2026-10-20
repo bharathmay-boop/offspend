@@ -50,4 +50,11 @@ class ModelFallbackTest {
     @Test fun thePromptCarriesTheMessage() {
         assertTrue(ModelFallback.prompt(message).endsWith(message))
     }
+
+    // #188: a made-up code would crash every screen the payment shows on.
+    @Test fun anUnknownCurrencyCodeFallsBackToTheDefault() {
+        val qqq = answer().replace("\"INR\"", "\"QQQ\"")
+        assertEquals("INR", ModelFallback.accept(message, qqq)!!.money.currency)
+        assertEquals("AED", ModelFallback.accept(message, answer().replace("\"INR\"", "\"aed\""))!!.money.currency)
+    }
 }
