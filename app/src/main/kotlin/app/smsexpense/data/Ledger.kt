@@ -254,11 +254,14 @@ class Ledger(
     }
 
     suspend fun setNote(transactionId: Long, note: String?) =
-        db.transactions().setNote(transactionId, note?.trim()?.takeIf { it.isNotEmpty() })
+        // Capped here too: a reply typed on the notification never passes through a sheet's limit (#189).
+        db.transactions().setNote(transactionId, note?.trim()?.take(NOTE_MAX)?.takeIf { it.isNotEmpty() })
 
     companion object {
         /** The source of an entry the person typed in. */
         const val MANUAL = "MANUAL"
+        /** The longest note kept, in characters. */
+        const val NOTE_MAX = 200
         private const val TWIN_WINDOW_MS = 10 * 60 * 1000L
         private const val HAND_ADDED_BEFORE_MS = 24 * 60 * 60 * 1000L
         private const val HAND_ADDED_AFTER_MS = 60 * 60 * 1000L
