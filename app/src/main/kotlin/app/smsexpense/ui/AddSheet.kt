@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import app.smsexpense.R
 import app.smsexpense.core.Direction
 import app.smsexpense.data.CategoryEntity
+import app.smsexpense.data.Ledger
 import app.smsexpense.ui.components.CategoryChip
 import app.smsexpense.ui.components.dayLabel
 import app.smsexpense.ui.theme.Haptics
@@ -255,7 +256,7 @@ fun AddSheet(
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.l)) {
                 OutlinedTextField(
                     value = note,
-                    onValueChange = { note = it.take(200) },
+                    onValueChange = { note = it.take(Ledger.NOTE_MAX) },
                     label = { Text("Note") },
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     modifier = Modifier.fillMaxWidth().testTag("note"),

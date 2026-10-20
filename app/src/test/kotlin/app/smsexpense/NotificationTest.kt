@@ -133,4 +133,16 @@ class NotificationTest {
         assertEquals(1, TransactionNotifier.waiting(shown = setOf(1, 2), removed = 2))
         assertEquals(2, TransactionNotifier.waiting(shown = setOf(1, 2), posted = 2))
     }
+
+    // #189: a reply typed on the notification is held to the same limit as the sheets.
+    @Test fun aLongReplyIsCutToTheNoteLimit() = runTest {
+        val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 7_000L)!!
+        val intent = Intent(TransactionNotifier.ACTION_NOTE)
+        RemoteInput.addResultsToIntent(
+            arrayOf(RemoteInput.Builder(TransactionNotifier.KEY_NOTE).build()), intent,
+            Bundle().apply { putCharSequence(TransactionNotifier.KEY_NOTE, "x".repeat(10_000)) },
+        )
+        NotificationActionReceiver.handle(app, intent, id)
+        assertEquals(200, app.db.transactions().byId(id)!!.note!!.length)
+    }
 }
