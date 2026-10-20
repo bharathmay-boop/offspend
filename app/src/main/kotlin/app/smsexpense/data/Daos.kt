@@ -45,6 +45,14 @@ interface TransactionDao {
     )
     suspend fun fromOtherSourcesNear(direction: Direction, currency: String, source: String, from: Long, to: Long): List<TransactionEntity>
 
+    /** Payments, deleted ones too, that this app's alert for this payee reported in a time window. */
+    @Query(
+        "SELECT t.* FROM transactions t JOIN sightings s ON s.transactionId = t.id WHERE s.source = 'NOTIFICATION' " +
+            "AND s.sender = :app AND s.merchant IS :merchant AND t.direction = :direction AND t.currency = :currency " +
+            "AND s.seenAt BETWEEN :from AND :to",
+    )
+    suspend fun seenFromAppNear(app: String, merchant: String?, direction: Direction, currency: String, from: Long, to: Long): List<TransactionEntity>
+
     /** Category ids by how many payments use them, most first, for the sheet's quick picks (#166). */
     @Query("SELECT categoryId FROM transactions WHERE categoryId IS NOT NULL AND deleted = 0 GROUP BY categoryId ORDER BY COUNT(*) DESC LIMIT 3")
     suspend fun mostUsedCategories(): List<Long>

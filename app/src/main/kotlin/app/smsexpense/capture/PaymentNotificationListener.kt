@@ -23,13 +23,21 @@ class PaymentNotificationListener : NotificationListenerService() {
         val extras = sbn.notification.extras
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = (extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty()
-        // The app's own timestamp stays the same when it updates a notification, so an update is not saved twice.
-        val at = sbn.notification.`when`.takeIf { it > 0 } ?: sbn.postTime
+        val at = timeOf(sbn.notification.`when`, sbn.postTime)
         val app = applicationContext as ExpenseApp
         app.scope.launch { capture(app, sbn.packageName, title, text, at) }
     }
 
     companion object {
+        private const val MAX_SKEW_MS = 10 * 60 * 1000L
+
+        /**
+         * The app's own timestamp stays the same when it updates a notification, so it is used when it is close to
+         * when the phone actually showed it. The app sets it freely, so one far off falls back to the phone's time (#191).
+         */
+        fun timeOf(whenMs: Long, postTime: Long): Long =
+            whenMs.takeIf { it > 0 && kotlin.math.abs(it - postTime) <= MAX_SKEW_MS } ?: postTime
+
         /**
          * Picks the first readable version (the text alone, then title and text together) and saves only that one,
          * so a repeat of the same notification is recognised as a duplicate instead of retried in another form.

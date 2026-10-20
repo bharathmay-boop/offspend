@@ -50,4 +50,26 @@ class NotificationCaptureTest {
         PaymentNotificationListener.capture(app, gpay, "Google Pay", "Paid ₹320 to California Burrito", 5_000L)
         assertNull(PaymentNotificationListener.capture(app, gpay, "Google Pay", "Paid ₹320 to California Burrito", 5_000L))
     }
+
+    // #191: the app sets the alert's time itself, so a repost with a new time is still the same payment.
+    @Test fun theSameAlertPostedAgainWithANewTimeIsNotSavedTwice() = runTest {
+        assertNotNull(PaymentNotificationListener.capture(app, gpay, "Google Pay", "Paid ₹320 to California Burrito", 5_000L))
+        assertNull(PaymentNotificationListener.capture(app, gpay, "Google Pay", "Paid ₹320 to California Burrito", 5_000L + 4 * 60_000))
+        assertEquals(1, app.db.transactions().observeAll().first().size)
+    }
+
+    @Test fun aRepostDoesNotBringBackAPaymentThePersonDeleted() = runTest {
+        val id = PaymentNotificationListener.capture(app, gpay, "Google Pay", "Paid ₹320 to California Burrito", 5_000L)!!
+        app.ledger.delete(id)
+        assertNull(PaymentNotificationListener.capture(app, gpay, "Google Pay", "Paid ₹320 to California Burrito", 5_000L + 60_000))
+        assertEquals(0, app.db.transactions().observeAll().first().size)
+    }
+
+    @Test fun anAlertsOwnTimeIsUsedOnlyWhenItIsCloseToWhenThePhoneShowedIt() {
+        val shown = 1_760_000_000_000L
+        assertEquals(shown - 60_000, PaymentNotificationListener.timeOf(shown - 60_000, shown))
+        assertEquals(shown, PaymentNotificationListener.timeOf(1_577_836_800_000L, shown)) // 2020-01-01
+        assertEquals(shown, PaymentNotificationListener.timeOf(shown + 86_400_000L, shown))
+        assertEquals(shown, PaymentNotificationListener.timeOf(0, shown))
+    }
 }
