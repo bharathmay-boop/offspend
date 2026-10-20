@@ -47,14 +47,24 @@ class ProvenanceTest {
         assertEquals("PhonePe for Business alert · 2:14 PM", lines("NOTIFICATION", sighting("NOTIFICATION", "com.phonepe.app", "Ravi")) { "PhonePe for Business" }.single().text)
     }
 
-    @Test fun aHandAddedPaymentIsConfirmedByTheBank() {
+    @Test fun aHandAddedPaymentIsMatchedWithTheBankText() {
         val got = lines("MANUAL", sighting("MANUAL", null, "Chai stall", seenAt = at - 4 * 60_000L), sighting("SMS", "JD-ICICIT", null, "567"))
-        assertEquals(listOf("Added by you · 2:10 PM", "Confirmed by ICICI Bank text · a/c ••567 · 2:14 PM"), got.map { it.text })
+        assertEquals(listOf("Added by you · 2:10 PM", "Matched with ICICI Bank text · a/c ••567 · 2:14 PM"), got.map { it.text })
     }
 
     @Test fun unknownSendersAndOlderPaymentsStillReadSensibly() {
         assertEquals("XYZBNK", Provenance.bankName("VM-XYZBNK"))
         assertEquals("Bank text · 2:14 PM", lines("SMS", sighting("SMS", null, "SWIGGY")).single().text)
         assertEquals("Payment app alert · 2:14 PM", lines("NOTIFICATION", sighting("NOTIFICATION", "com.example.pay", "X")).single().text)
+    }
+
+    // #194: anyone can send from "HDFC" or "HDFCBK"; only the registered header shape is named as a bank.
+    @Test fun aSenderOutsideTheBankHeaderShapeIsNotNamedAsABank() {
+        assertNull(Provenance.bankName("HDFC"))
+        assertNull(Provenance.bankName("HDFCBK"))
+        assertNull(Provenance.bankName("XX-HDFCBANK"))
+        assertEquals("HDFC Bank", Provenance.bankName("VM-HDFCBK-S"))
+        assertEquals("Text from HDFCBK · 2:14 PM", lines("SMS", sighting("SMS", "HDFCBK", "SWIGGY")).single().text)
+        assertEquals("Matched with a text from HDFC · 2:14 PM", lines("MANUAL", sighting("SMS", "HDFC", null)).single().text)
     }
 }
