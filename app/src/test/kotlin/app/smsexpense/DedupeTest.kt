@@ -111,4 +111,12 @@ class DedupeTest {
         assertNotNull(ledger.record(Source.SMS, "VM-PNBSMS", bankSms.replace("428877776666", "428877776667"), minute))
         assertEquals(2, all().size)
     }
+
+    // #187: deleting one report must not hide a later real payment the other source reports.
+    @Test fun aDeletedPaymentDoesNotSwallowTheOtherSourcesReport() = runTest {
+        val deleted = ledger.record(Source.SMS, "VM-PNBSMS", bankSms, 0)!!
+        ledger.delete(deleted)
+        assertNotNull(ledger.record(Source.NOTIFICATION, gpay, gpayNotification, 2 * minute))
+        assertEquals("California Burrito", all().single().merchant)
+    }
 }

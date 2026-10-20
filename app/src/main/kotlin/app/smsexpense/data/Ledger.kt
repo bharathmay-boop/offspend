@@ -106,7 +106,8 @@ class Ledger(
         db.transactions()
             .fromOtherSourcesNear(reading.direction, reading.money.currency, source.name, at - TWIN_WINDOW_MS, at + TWIN_WINDOW_MS)
             // Hand-added entries are never merged silently; they get asked about instead (#53).
-            .firstOrNull { it.source != MANUAL && it.amount.compareTo(reading.money.amount) == 0 }
+            // A row the person deleted is not a twin; a hidden bank copy matched to a hand-added entry still is (#187).
+            .firstOrNull { it.source != MANUAL && it.amount.compareTo(reading.money.amount) == 0 && (!it.deleted || handAddedTwinOf(it) != null) }
 
     private fun fingerprint(source: Source, sender: String, body: String, receivedAt: Long): String =
         MessageDigest.getInstance("SHA-256")
