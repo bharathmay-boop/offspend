@@ -115,4 +115,12 @@ class MatchHandAddedTest {
         NotificationActionReceiver.handle(app, Intent(TransactionNotifier.ACTION_SEPARATE), bank)
         assertEquals(null, app.db.transactions().byId(manual)!!.merchant)
     }
+
+    // #187: the hidden bank copy still stands for the hand-added payment, so the app's notification merges into it.
+    @Test fun thePaymentAppsReportOfAHandAddedPaymentIsNotCountedTwice() = runTest {
+        val manual = addByHand(t0)
+        app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)
+        app.ledger.record(Source.NOTIFICATION, "com.google.android.apps.nbu.paisa.user", "Paid ₹420 to Swiggy", t0 + 2 * 60_000)
+        assertEquals(listOf(manual), visible().map { it.id })
+    }
 }
