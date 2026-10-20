@@ -228,10 +228,17 @@ class Ledger(
     /** "No, add it" on the same-payment question: the bank's copy becomes its own payment and takes its sighting back. */
     suspend fun keepSeparate(bankCopyId: Long) {
         val bank = db.transactions().byId(bankCopyId) ?: return
-        // Not the same payment, so a payee filled in from the bank's text goes back with it (#179).
+        // Not the same payment: whatever the match took from the bank's text goes back, and the hand-added entry
+        // can match the real bank text later (#179, #193).
         handAddedTwinOf(bank)?.let { manual ->
-            val typed = db.sightings().forTransaction(manual.id).firstOrNull { it.source == MANUAL }?.merchant
-            if (typed == null && manual.merchant == bank.merchant) db.transactions().update(manual.copy(merchant = null))
+            val typed = db.sightings().forTransaction(manual.id).firstOrNull { it.source == MANUAL }
+            db.transactions().update(
+                manual.copy(
+                    merchant = if (typed?.merchant == null && manual.merchant == bank.merchant) null else manual.merchant,
+                    accountLast4 = if (typed?.accountLast4 == null && manual.accountLast4 == bank.accountLast4) null else manual.accountLast4,
+                    fingerprint = "manual-${manual.fingerprint.removePrefix("manual-matched-")}",
+                ),
+            )
         }
         restore(bankCopyId)
         db.sightings().moveTo(bank.fingerprint, bankCopyId)

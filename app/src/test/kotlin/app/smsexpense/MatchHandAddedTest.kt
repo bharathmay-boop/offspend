@@ -115,4 +115,15 @@ class MatchHandAddedTest {
         NotificationActionReceiver.handle(app, Intent(TransactionNotifier.ACTION_SEPARATE), bank)
         assertEquals(null, app.db.transactions().byId(manual)!!.merchant)
     }
+
+    // #193: "No, add it" undoes the whole match, so the real bank text can still match the hand-added payment.
+    @Test fun noAddItUndoesTheMatchSoTheRealBankTextStillMatches() = runTest {
+        val manual = addByHand(t0)
+        val wrong = app.onMessage(Source.SMS, "AD-HDFCBK", sms.replace("*1234", "*9999"), t0 + 60_000)!!
+        NotificationActionReceiver.handle(app, Intent(TransactionNotifier.ACTION_SEPARATE), wrong)
+        assertEquals(null, app.db.transactions().byId(manual)!!.accountLast4)
+        app.onMessage(Source.SMS, "AD-HDFCBK", sms.replace("412398765099", "412398765100"), t0 + 120_000)
+        assertEquals(listOf(manual, wrong).sorted(), visible().map { it.id }.sorted())
+        assertEquals("1234", app.db.transactions().byId(manual)!!.accountLast4)
+    }
 }
