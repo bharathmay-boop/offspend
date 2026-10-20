@@ -3,6 +3,7 @@ package app.smsexpense.core
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.math.BigDecimal
+import java.util.Currency
 
 /**
  * Asks an on-device model to read a message the rules could not, and checks its answer before trusting it.
@@ -46,7 +47,9 @@ object ModelFallback {
         // The amount must be one of the numbers actually written in the message.
         val written = numberInText.findAll(message).map { BigDecimal(it.value.replace(",", "")) }
         if (written.none { it.compareTo(amount) == 0 }) return null
-        val currency = answer.currency?.uppercase()?.takeIf { it.matches(Regex("[A-Z]{3}")) } ?: defaultCurrency
+        // Only a real currency code: an unknown one can't be shown, and the message's sender can steer the model (#188).
+        val currency = answer.currency?.uppercase()?.takeIf { c -> c.matches(Regex("[A-Z]{3}")) && runCatching { Currency.getInstance(c) }.isSuccess }
+            ?: defaultCurrency
         val merchant = answer.merchant?.trim()?.takeIf { it.isNotEmpty() && message.contains(it, ignoreCase = true) }
         val account = answer.account?.filter { it.isDigit() }?.takeIf { it.length in 3..5 && message.contains(it) }
         return SmsReading.Transaction(direction, Money(amount, currency), merchant, account)

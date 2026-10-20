@@ -51,7 +51,8 @@ import java.util.Locale
 /** Formats an amount in its own currency, e.g. ₹1,25,000.00 or AED 45.50. [whole] drops ".00" from a round amount, for glanceable totals. */
 fun formatMoney(amount: BigDecimal, currency: String, locale: Locale = Locale.getDefault(), whole: Boolean = false): String {
     val f = NumberFormat.getCurrencyInstance(if (currency == "INR") Locale.forLanguageTag("en-IN") else locale)
-    f.currency = Currency.getInstance(currency)
+    // A row saved with an unknown code before #188 must still show, not crash every screen it is on.
+    f.currency = runCatching { Currency.getInstance(currency) }.getOrNull() ?: return "$currency ${amount.toPlainString()}"
     if (whole && amount.stripTrailingZeros().scale() <= 0) f.maximumFractionDigits = 0
     return f.format(amount)
 }
