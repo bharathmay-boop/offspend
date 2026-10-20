@@ -41,6 +41,8 @@ class Ledger(
             transactionId = txId, source = source.name, sender = sender, merchant = reading.merchant,
             accountLast4 = reading.account, seenAt = receivedAt, fingerprint = print,
         )
+        // A payment app can post the same alert again with a new time; that is the same payment, even if deleted (#191).
+        if (source == Source.NOTIFICATION && repostOf(reading, sender, receivedAt)) return null
         sameTransactionFromOtherSource(reading, source, receivedAt)?.let { twin ->
             // Keep the first one; it was seen again, and the second source may name the payee better.
             db.sightings().insert(seen(twin.id))
@@ -108,6 +110,12 @@ class Ledger(
             // Hand-added entries are never merged silently; they get asked about instead (#53).
             // A row the person deleted is not a twin; a hidden bank copy matched to a hand-added entry still is (#187).
             .firstOrNull { it.source != MANUAL && it.amount.compareTo(reading.money.amount) == 0 && (!it.deleted || handAddedTwinOf(it) != null) }
+
+    // ponytail: two genuine equal payments to one payee through one app within ten minutes count once; key on the alert's own id if that shows up
+    private suspend fun repostOf(reading: SmsReading.Transaction, app: String, at: Long): Boolean =
+        db.transactions()
+            .seenFromAppNear(app, reading.merchant, reading.direction, reading.money.currency, at - TWIN_WINDOW_MS, at + TWIN_WINDOW_MS)
+            .any { it.amount.compareTo(reading.money.amount) == 0 }
 
     private fun fingerprint(source: Source, sender: String, body: String, receivedAt: Long): String =
         MessageDigest.getInstance("SHA-256")
