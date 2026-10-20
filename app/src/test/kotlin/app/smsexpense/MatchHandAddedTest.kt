@@ -134,4 +134,11 @@ class MatchHandAddedTest {
         assertEquals(listOf(manual, wrong).sorted(), visible().map { it.id }.sorted())
         assertEquals("1234", app.db.transactions().byId(manual)!!.accountLast4)
     }
+
+    // #192: "No, add it" changes totals, so it needs the phone unlocked; "Yes, same" only dismisses.
+    @Test fun noAddItAsksForTheUnlockFirst() = runTest {
+        addByHand(t0)
+        app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)
+        assertEquals(listOf(false, true), notifications.single().actions.map { it.isAuthenticationRequired })
+    }
 }

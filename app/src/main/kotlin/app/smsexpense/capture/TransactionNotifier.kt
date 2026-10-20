@@ -84,11 +84,12 @@ object TransactionNotifier {
             .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
 
         if (category != null) {
-            builder.addAction(0, confirmLabel(category.name, filedBefore), broadcast(context, ACTION_CONFIRM, tx.id) { putExtra(EXTRA_CATEGORY, category.id) })
+            builder.addAction(unlocked(confirmLabel(category.name, filedBefore), broadcast(context, ACTION_CONFIRM, tx.id) { putExtra(EXTRA_CATEGORY, category.id) }))
         }
         val noteInput = RemoteInput.Builder(KEY_NOTE).setLabel("Add a note").build()
         builder.addAction(
             NotificationCompat.Action.Builder(0, "Add note", broadcast(context, ACTION_NOTE, tx.id, mutable = true))
+                .setAuthenticationRequired(true)
                 .addRemoteInput(noteInput).setAllowGeneratedReplies(false).build(),
         )
 
@@ -114,7 +115,7 @@ object TransactionNotifier {
             .setGroup(GROUP)
             .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
             .addAction(0, "Yes, same", broadcast(context, ACTION_SAME, bank.id))
-            .addAction(0, "No, add it", broadcast(context, ACTION_SEPARATE, bank.id))
+            .addAction(unlocked("No, add it", broadcast(context, ACTION_SEPARATE, bank.id)))
             .build()
         NotificationManagerCompat.from(context).notify(bank.id.toInt(), n)
         updateSummary(context)
@@ -156,6 +157,10 @@ object TransactionNotifier {
             .build()
         manager.notify(SUMMARY_ID, summary)
     }
+
+    /** A button that changes the ledger asks for the phone to be unlocked first, so nobody can tap it on a locked phone (#192). */
+    private fun unlocked(label: CharSequence, intent: PendingIntent) =
+        NotificationCompat.Action.Builder(0, label, intent).setAuthenticationRequired(true).build()
 
     private fun broadcast(
         context: Context, action: String, txId: Long, mutable: Boolean = false, extras: Intent.() -> Unit = {},

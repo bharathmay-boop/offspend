@@ -145,4 +145,10 @@ class NotificationTest {
         NotificationActionReceiver.handle(app, intent, id)
         assertEquals(200, app.db.transactions().byId(id)!!.note!!.length)
     }
+
+    // #192: a button that changes the ledger can't be used from a locked phone.
+    @Test fun theButtonsAskForTheUnlockFirst() = runTest {
+        app.onMessage(Source.SMS, "AD-HDFCBK", payment, 8_000L)
+        assertEquals(listOf(true, true), notifications.single().actions.map { it.isAuthenticationRequired })
+    }
 }
