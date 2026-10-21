@@ -9,7 +9,18 @@ The app reads SMS, which Google Play restricts, so there are two extra gates on 
 - [ ] Google Play Console developer account ($25 one time, identity verification).
 - [ ] App name and icon chosen (the name is still open; the repo uses a working name).
 - [ ] Privacy policy published at a public URL. The text is in [privacy-policy.md](privacy-policy.md); GitHub Pages on this repo is enough.
-- [ ] Release build signed with an upload key kept outside the repo (never committed).
+- [x] Release build signed with an upload key kept outside the repo (never committed). See "Release build" below.
+
+## Release build
+
+`./gradlew bundleRelease` builds `app/build/outputs/bundle/release/app-release.aab`. That's the file uploaded to Play. The release build is shrunk with R8 and signed with the upload key; Play App Signing re-signs it with Google's key before it reaches phones.
+
+- **Where the key is:** `D:\dev\keys\sms-expense-upload.jks`, with its alias and passwords in `D:\dev\keys\sms-expense-upload.properties`. Neither is in the repo, and `.gitignore` blocks `*.jks`, `*.keystore`, `keystore.properties` and `.env` (a test fails if that changes).
+- **How Gradle finds it:** the line `smsExpenseSigning=<path to the properties file>` in `~/.gradle/gradle.properties`. Without it the release build is left unsigned and Play rejects it.
+- **Back it up:** copy both files somewhere safe outside this PC, such as an encrypted USB drive or a password manager. If the upload key is lost, Play support can register a new one, but that takes days.
+- **Upload key certificate SHA-256:** `5B:F5:90:84:AF:CF:1A:5A:9B:56:35:12:15:4B:DE:0C:F4:40:CE:40:31:B4:7E:C2:06:DB:05:E8:4A:61:38:0E`. Play Console shows the same value under App integrity once the first bundle is uploaded.
+- **Version:** raise `versionCode` by one and set `versionName` in `app/build.gradle.kts` before every upload. Play refuses a `versionCode` it has seen before. The first upload is `versionCode 1`, `versionName 0.1.0`.
+- **Before uploading:** install the release APK (`./gradlew assembleRelease`) on the emulator and check that SMS capture, a notification button and the Add screen still work, since R8 can break code that uses reflection.
 
 ## 2. SMS permission declaration
 
@@ -66,7 +77,28 @@ If Android backup is turned back on later (see issue #29), revisit this section:
 
 ## 7. Store listing
 
-- [ ] Short description (80 characters), for example: "Track spending from your bank SMS. One tap per payment. Nothing leaves your phone."
-- [ ] Full description, screenshots (phone), feature graphic, app icon.
+- [ ] Short description (80 characters at most): "Track spending from your bank SMS. One tap per payment. Nothing leaves your phone."
+- [ ] Full description (4000 characters at most), draft below. Play wants the SMS feature described prominently, since it's the reason for the permission.
+- [ ] Graphics: 512 x 512 app icon, 1024 x 500 feature graphic, and 2 to 8 phone screenshots. These are part of the marketing epic (#205).
+
+**Full description draft:**
+
+> Your bank already texts you every time you pay. This app turns those messages into a spending tracker, so you don't have to type anything.
+>
+> When a bank, card or UPI message arrives, the app reads the amount, the payee and the account, guesses a category, and shows a notification. One tap files it. If the guess is wrong, tap to pick another category or add a note.
+>
+> What it does:
+> - Catches payments from bank SMS as they arrive, in any currency
+> - Files your last 3 months of bank messages when you first set it up
+> - Optionally reads payment notifications from UPI and bank apps, for small payments that skip the SMS
+> - Shows where your money went each month, by category
+> - Lets you add cash payments by hand, and matches them to the bank message when it arrives later
+>
+> What it never does:
+> - It has no internet permission, so nothing can leave your phone. You can check this in the permission list before installing.
+> - It doesn't keep the text of your messages, only the amount, payee, account digits, time and the category you choose.
+> - It skips one-time passwords, personal messages and offers.
+>
+> There's no account and no sign-up. Uninstalling the app deletes everything.
 - [ ] Category: Finance.
 - [ ] Contact email and the privacy policy URL.

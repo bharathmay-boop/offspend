@@ -25,6 +25,8 @@ You need JDK 21 and the Android SDK (platform 37, plus an Android 16 system imag
 ./gradlew lintDebug
 ```
 
+For the Play build, `./gradlew bundleRelease` writes `app/build/outputs/bundle/release/app-release.aab`, shrunk with R8 and signed with the upload key. The key is never in the repo: see "Release build" in [docs/PLAY_RELEASE.md](docs/PLAY_RELEASE.md).
+
 Point Gradle at the SDK with a `local.properties` file containing `sdk.dir=<path to your SDK>`.
 
 To try it on an emulator, install the debug APK, then send a fake bank SMS from the emulator console:
