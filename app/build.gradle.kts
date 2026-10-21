@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -14,6 +16,30 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+    }
+
+    // The upload key and its passwords live outside the repo. Point the Gradle property
+    // smsExpenseSigning (in ~/.gradle/gradle.properties) at the properties file; without it
+    // the release build is left unsigned.
+    val signing = providers.gradleProperty("smsExpenseSigning").orNull?.let { path ->
+        Properties().apply { file(path).inputStream().use(::load) }
+    }
+    signingConfigs {
+        if (signing != null) create("upload") {
+            storeFile = file(signing.getProperty("storeFile"))
+            storePassword = signing.getProperty("storePassword")
+            keyAlias = signing.getProperty("keyAlias")
+            keyPassword = signing.getProperty("keyPassword")
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            signingConfig = signingConfigs.findByName("upload")
+        }
     }
 
     buildFeatures { compose = true }

@@ -43,4 +43,12 @@ class PrivacyTest {
             assertTrue("$s must exclude the database and settings", excluded[s].orEmpty().containsAll(listOf("database", "sharedpref")))
         }
     }
+
+    // #105: the Play upload key and its passwords must never reach git.
+    @Test fun theUploadKeyCanNotBeCommitted() {
+        for (path in listOf("upload.jks", "app/upload.keystore", "keystore.properties", ".env")) {
+            val ignored = ProcessBuilder("git", "check-ignore", "-q", "--no-index", path).start().waitFor() == 0
+            assertTrue("$path must be gitignored", ignored)
+        }
+    }
 }
