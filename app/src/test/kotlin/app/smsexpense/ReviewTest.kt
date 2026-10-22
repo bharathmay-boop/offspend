@@ -104,6 +104,9 @@ class ReviewSheetTest {
             compose.onNodeWithText("Groceries").performClick()
             compose.mainClock.advanceTimeBy(Motion.CONFIRM_HOLD_MS + 500)
             compose.waitForIdle()
+            // The sheet saves on its own scope, which ends when the activity closes at the end of this block.
+            // So wait here for the last save, while the main thread keeps running (#230).
+            compose.waitUntil(5_000) { runBlocking { app.db.transactions().byId(b)!!.categoryId != null } }
         }
         runBlocking {
             assertNotNull(app.db.transactions().byId(a)!!.categoryId)
