@@ -1,5 +1,9 @@
 package app.smsexpense
 
+import kotlinx.coroutines.runBlocking
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.CompletableFuture
 import androidx.test.core.app.ApplicationProvider
 import app.smsexpense.capture.InboxMessage
 import app.smsexpense.core.Source
@@ -69,5 +73,21 @@ class CatchUpTest {
     @Test fun messagesFromBeforeSetupAreLeftToTheHistoryImport() = runTest {
         inbox += payment("OLD SHOP", 10_000L)
         assertEquals(0, app.catchUp(reader))
+    }
+
+    // #218: every app start launches a catch-up; a second one while the first is still reading does nothing.
+    @Test fun aSecondCatchUpWhileOneRunsDoesNothing() = runTest {
+        val reading = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val first = CompletableFuture.supplyAsync { runBlocking { app.catchUp { reading.countDown(); release.await(); emptyList() } } }
+        reading.await(5, TimeUnit.SECONDS)
+        var secondRead = false
+        assertEquals(0, app.catchUp { secondRead = true; emptyList() })
+        release.countDown()
+        first.get(5, TimeUnit.SECONDS)
+        assertEquals(false, secondRead)
+        // Once the first is done, the next one runs as normal.
+        app.catchUp { secondRead = true; emptyList() }
+        assertEquals(true, secondRead)
     }
 }
