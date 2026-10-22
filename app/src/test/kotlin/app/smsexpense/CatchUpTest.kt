@@ -70,4 +70,26 @@ class CatchUpTest {
         inbox += payment("OLD SHOP", 10_000L)
         assertEquals(0, app.catchUp(reader))
     }
+
+    // #219: some SMS apps store a sent time that isn't what the live receiver saw.
+    @Test fun aLivePaymentIsNotFiledAgainWhenTheSmsAppStoresADifferentSentTime() = runTest {
+        val body = payment("BLINKIT", 0).body
+        app.onMessage(Source.SMS, "AD-HDFCBK", body, 2_000_000L)
+        inbox += InboxMessage("AD-HDFCBK", body, receivedAt = 2_095_000L, sentAt = 2_090_000L)
+        assertEquals(0, app.catchUp(reader))
+        assertEquals(1, app.db.transactions().observeAll().first().size)
+    }
+
+    @Test fun twoIdenticalTextsCaughtLiveMinutesApartAreTwoPayments() = runTest {
+        val body = payment("TEA STALL", 0).body
+        app.onMessage(Source.SMS, "AD-HDFCBK", body, 2_000_000L)
+        app.onMessage(Source.SMS, "AD-HDFCBK", body, 2_120_000L)
+        assertEquals(2, app.db.transactions().observeAll().first().size)
+    }
+
+    @Test fun anotherTextFromTheSameBankAtAboutTheSameTimeIsStillFiled() = runTest {
+        app.onMessage(Source.SMS, "AD-HDFCBK", payment("BLINKIT", 0).body, 2_000_000L)
+        inbox += payment("ZEPTO", 2_060_000L)
+        assertEquals(1, app.catchUp(reader))
+    }
 }
