@@ -173,4 +173,15 @@ class NotificationTest {
         assertTrue(app.db.merchantRules().all().isEmpty())
         assertTrue(notifications.isEmpty())
     }
+
+    // #220: a locked phone shows that a payment was found, never the amount, payee or note.
+    @Test fun aLockedPhoneShowsOnlyThatAPaymentWasFound() = runTest {
+        app.onMessage(Source.SMS, "AD-HDFCBK", payment, 8_000L)
+        val n = notifications.single()
+        assertEquals(Notification.VISIBILITY_PRIVATE, n.visibility)
+        val public = n.publicVersion!!
+        assertEquals(TransactionNotifier.LOCKED_TITLE, public.extras.getString("android.title"))
+        val shown = public.extras.getString("android.title") + public.extras.getString("android.text")
+        assertTrue(listOf("320", "Burrito", "BURRITO").none { it in shown })
+    }
 }

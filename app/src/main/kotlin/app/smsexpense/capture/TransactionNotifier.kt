@@ -82,6 +82,7 @@ object TransactionNotifier {
             // Our own group: otherwise Android 16 groups loose notifications itself and silences them all (#71).
             .setGroup(GROUP)
             .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .hiddenWhenLocked(context)
 
         if (category != null) {
             builder.addAction(unlocked(confirmLabel(category.name, filedBefore), broadcast(context, ACTION_CONFIRM, tx.id) { putExtra(EXTRA_CATEGORY, category.id) }))
@@ -114,12 +115,32 @@ object TransactionNotifier {
             .setAutoCancel(true)
             .setGroup(GROUP)
             .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .hiddenWhenLocked(context)
             .addAction(0, "Yes, same", broadcast(context, ACTION_SAME, bank.id))
             .addAction(unlocked("No, add it", broadcast(context, ACTION_SEPARATE, bank.id)))
             .build()
         NotificationManagerCompat.from(context).notify(bank.id.toInt(), n)
         updateSummary(context)
     }
+
+    /**
+     * What a locked phone shows instead: that a payment was found, never the amount, payee or note (#220).
+     * Android uses it when the phone is set to hide sensitive notification content on the lock screen. With
+     * "show all content" Android shows the full notification, and no app can override that choice.
+     */
+    private fun NotificationCompat.Builder.hiddenWhenLocked(context: Context) = setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+        .setPublicVersion(
+            NotificationCompat.Builder(context, CHANNEL)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(LOCKED_TITLE)
+                .setContentText(LOCKED_TEXT)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .setGroup(GROUP)
+                .build(),
+        )
+
+    const val LOCKED_TITLE = "Payment found"
+    const val LOCKED_TEXT = "Unlock to see it"
 
     fun dismiss(context: Context, txId: Long) {
         NotificationManagerCompat.from(context).cancel(txId.toInt())
