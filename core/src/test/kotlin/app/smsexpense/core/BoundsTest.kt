@@ -15,6 +15,10 @@ class BoundsTest {
         assertNull(Bounds.check(reading("1000000000000")))
     }
 
+    @Test fun nothingMovedIsNotAPayment() {
+        assertNull(Bounds.check(reading("0.00")))
+    }
+
     @Test fun largeRealAmountsStillCount() {
         // 50 crore rupees, or a few thousand dollars counted in rupiah.
         assertEquals(BigDecimal("500000000.00"), Bounds.check(reading("500000000.00"))!!.money.amount)

@@ -11,12 +11,13 @@ object Bounds {
     const val MERCHANT_MAX = 60
 
     /**
-     * The reading with its payee cleaned up, or null when the amount is out of range.
+     * The reading with its payee cleaned up, or null when the amount is zero or out of range. (A negative amount
+     * can't get this far: [Money] refuses one.)
      * Invisible format characters (Unicode Cf, which includes the direction overrides like U+202E) and control
      * characters are removed, so a payee can't be made to display as something else; spacing is collapsed.
      */
     fun check(reading: SmsReading.Transaction): SmsReading.Transaction? {
-        if (reading.money.amount > MAX_AMOUNT) return null
+        if (reading.money.amount.signum() == 0 || reading.money.amount > MAX_AMOUNT) return null
         return reading.copy(merchant = reading.merchant?.let(::cleanMerchant))
     }
 
