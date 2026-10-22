@@ -47,6 +47,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -118,6 +119,8 @@ fun HomeScreen(
     onReview: (List<Long>) -> Unit,
     /** Opens the sheet to add a payment or money received by hand. */
     onAdd: () -> Unit,
+    /** Opens Settings from the round button at the top right (#77). */
+    onSettings: () -> Unit = {},
     /** An entry just deleted from a sheet: show "Payment deleted" with Undo (#52). */
     justDeleted: Long? = null,
     onUndoDelete: (Long) -> Unit = {},
@@ -170,6 +173,8 @@ fun HomeScreen(
     ) { padding ->
         Column(Modifier.padding(padding)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.xs, vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+                // Balances the Settings button on the right, so the month stays centred.
+                Spacer(Modifier.size(Spacing.xxxl))
                 IconButton(onClick = previous) {
                     Icon(painterResource(R.drawable.ic_chevron_left), contentDescription = "Previous month")
                 }
@@ -188,6 +193,20 @@ fun HomeScreen(
                 }
                 IconButton(onClick = { next?.invoke() }, enabled = next != null) {
                     Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = "Next month")
+                }
+                // A person icon until the person sets a name, then their initial (#78).
+                IconButton(onClick = onSettings) {
+                    Box(
+                        Modifier.size(Spacing.xxl).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.ic_person),
+                            contentDescription = "Settings",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(Spacing.l + Spacing.xs),
+                        )
+                    }
                 }
             }
             AnimatedContent(

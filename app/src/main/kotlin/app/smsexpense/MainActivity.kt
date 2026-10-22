@@ -142,11 +142,7 @@ private fun Home(app: ExpenseApp) {
         },
         appNotificationsOffer = if (listenerOn || offerDismissed) null else AppNotificationsOffer(
             onTurnOn = {
-                app.startActivity(
-                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
-                        .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, PaymentNotificationListener.component(app).flattenToString())
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
+                app.startActivity(PaymentNotificationListener.settingsIntent(app).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             },
             onNotNow = {
                 prefs.edit().putBoolean("app_notifications_offer_dismissed", true).apply()
@@ -158,6 +154,7 @@ private fun Home(app: ExpenseApp) {
         onOpen = { app.startActivity(CategorySheetActivity.intent(app, it.id)) },
         onReview = { app.startActivity(CategorySheetActivity.reviewIntent(app, it.toLongArray())) },
         onAdd = { app.startActivity(AddPaymentActivity.intent(app)) },
+        onSettings = { app.startActivity(SettingsActivity.intent(app).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
         justDeleted = justDeleted,
         onUndoDelete = { id -> app.scope.launch { app.ledger.restore(id) } },
         onDeletedShown = { app.justDeleted.value = null },

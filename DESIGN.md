@@ -139,6 +139,12 @@ When any payments in the month have no category, a line under the month card say
 
 A message that is news once (how many payments the first import filed) is a snackbar, shown once, never a banner that stays. Cards that stay, like the offer to read UPI app notifications, get a title, one line and their buttons. While the first import runs, the list shows static placeholder rows in its own shape instead of claiming there are no payments. An empty month that is over says "No payments in September", never "yet".
 
+## Settings
+
+A round button at the top right of the home screen opens Settings: a person icon on the primary container color, or the person's initial once they set a name. An equal space on the left keeps the month title centred. TalkBack reads it as "Settings".
+
+Settings is one scrolling page with a back button and the title. Sections come in a fixed order: You, Categories, Money, Notifications, Privacy and data, Look, Plus, About. Each is a short label in the primary color over one rounded group (`medium` shape, `surfaceContainer`) of Material 3 list rows: an icon, a title, and the current value under it. A section with no rows yet does not show, so the page never offers something that isn't built. Rows that change a system setting (Payment app alerts) open the system screen and show the new value on return.
+
 ## Accessibility
 
 - Touch targets at least 48 by 48dp.

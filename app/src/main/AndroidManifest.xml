@@ -47,6 +47,10 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false" />
+
         <receiver
             android:name=".capture.SmsReceiver"
             android:exported="true"
