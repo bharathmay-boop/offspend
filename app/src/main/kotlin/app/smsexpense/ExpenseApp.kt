@@ -10,6 +10,7 @@ import app.smsexpense.core.Source
 import app.smsexpense.data.AppDatabase
 import app.smsexpense.data.Ledger
 import app.smsexpense.data.TransactionEntity
+import app.smsexpense.ui.theme.ThemeChoice
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -18,6 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 
 class ExpenseApp : Application() {
     // ponytail: one database and ledger on the Application, add DI if the graph grows
@@ -26,6 +28,16 @@ class ExpenseApp : Application() {
     // A failure in background capture must never crash the app. Only the exception type is logged, never message text.
     private val contained = CoroutineExceptionHandler { _, e -> Log.w("ExpenseApp", "background work failed: ${e.javaClass.simpleName}") }
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + contained)
+
+    private val uiPrefs by lazy { getSharedPreferences("ui", MODE_PRIVATE) }
+
+    /** Look › Theme, remembered on the phone (#84). Every open screen follows a change at once. */
+    val theme by lazy { MutableStateFlow(ThemeChoice.entries.firstOrNull { it.name == uiPrefs.getString(KEY_THEME, null) } ?: ThemeChoice.SYSTEM) }
+
+    fun setTheme(choice: ThemeChoice) {
+        uiPrefs.edit().putString(KEY_THEME, choice.name).apply()
+        theme.value = choice
+    }
 
     /** The entry just deleted from a sheet, so the home screen can offer Undo (#52). */
     val justDeleted = MutableStateFlow<Long?>(null)
@@ -86,6 +98,18 @@ class ExpenseApp : Application() {
      */
     suspend fun catchUp(readInbox: (Long) -> List<InboxMessage> = InboxImporter.systemInbox(this)): Int {
         if (!prefs.getBoolean(KEY_HISTORY_DONE, false)) return 0
+        // Every app start launches one; a second while the first runs would read and file the same messages again (#218).
+        if (!catchingUp.tryLock()) return 0
+        try {
+            return readMissed(readInbox)
+        } finally {
+            catchingUp.unlock()
+        }
+    }
+
+    private val catchingUp = Mutex()
+
+    private suspend fun readMissed(readInbox: (Long) -> List<InboxMessage>): Int {
         // Overlap by a minute; the fingerprint stops anything already saved from being saved twice.
         val since = prefs.getLong(KEY_LAST_SEEN, 0L) - 60_000
         val messages = readInbox(since)
@@ -130,6 +154,7 @@ class ExpenseApp : Application() {
     private companion object {
         const val KEY_HISTORY_DONE = "history_done"
         const val KEY_LAST_SEEN = "last_seen_sms"
+        const val KEY_THEME = "theme"
     }
 }
 

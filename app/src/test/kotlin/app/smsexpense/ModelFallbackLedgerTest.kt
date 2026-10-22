@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.smsexpense.core.Source
 import app.smsexpense.data.AppDatabase
 import app.smsexpense.data.Ledger
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -48,5 +49,20 @@ class ModelFallbackLedgerTest {
         l.record(Source.SMS, "VM-HDFCBK", "123456 is the OTP for your transaction of Rs.2,399.00. Do not share.", 0)
         l.record(Source.SMS, "AD-HDFCBK", "Sent Rs.320.00\nFrom HDFC Bank A/C *1234\nTo CALIFORNIA BURRITO", 0)
         assertEquals(emptyList<String>(), prompts)
+    }
+
+    // #218: the SMS receiver's deadline is about 10 seconds; a model that hangs must not hold it.
+    @Test fun aSlowModelIsGivenUpOnInsideTheReceiversDeadline() = runTest {
+        val slow = Ledger(db) { delay(60_000); goodAnswer }
+        assertNull(slow.record(Source.SMS, "VM-FEDBNK", unreadable, 0))
+        assertEquals(Ledger.MODEL_TIMEOUT_MS, testScheduler.currentTime)
+    }
+
+    // #218: catch-up reads the inbox again with a minute of overlap; a message already filed isn't sent to the model again.
+    @Test fun aMessageAlreadyFiledIsNotSentToTheModelAgain() = runTest {
+        val l = ledger(goodAnswer)
+        l.record(Source.SMS, "VM-FEDBNK", unreadable, 5_000)
+        l.record(Source.SMS, "VM-FEDBNK", unreadable, 5_000)
+        assertEquals(1, prompts.size)
     }
 }

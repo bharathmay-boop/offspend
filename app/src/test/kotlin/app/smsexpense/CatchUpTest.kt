@@ -4,12 +4,16 @@ import androidx.test.core.app.ApplicationProvider
 import app.smsexpense.capture.InboxMessage
 import app.smsexpense.core.Source
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 class CatchUpTest {
@@ -91,5 +95,21 @@ class CatchUpTest {
         app.onMessage(Source.SMS, "AD-HDFCBK", payment("BLINKIT", 0).body, 2_000_000L)
         inbox += payment("ZEPTO", 2_060_000L)
         assertEquals(1, app.catchUp(reader))
+    }
+
+    // #218: every app start launches a catch-up; a second one while the first is still reading does nothing.
+    @Test fun aSecondCatchUpWhileOneRunsDoesNothing() = runTest {
+        val reading = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val first = CompletableFuture.supplyAsync { runBlocking { app.catchUp { reading.countDown(); release.await(); emptyList() } } }
+        reading.await(5, TimeUnit.SECONDS)
+        var secondRead = false
+        assertEquals(0, app.catchUp { secondRead = true; emptyList() })
+        release.countDown()
+        first.get(5, TimeUnit.SECONDS)
+        assertEquals(false, secondRead)
+        // Once the first is done, the next one runs as normal.
+        app.catchUp { secondRead = true; emptyList() }
+        assertEquals(true, secondRead)
     }
 }

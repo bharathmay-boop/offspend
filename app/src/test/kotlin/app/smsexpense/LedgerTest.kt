@@ -2,6 +2,7 @@ package app.smsexpense
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.smsexpense.core.Source
 import app.smsexpense.core.Direction
 import app.smsexpense.data.AppDatabase
 import app.smsexpense.data.Ledger
@@ -110,5 +111,13 @@ class LedgerTest {
         val id = save("ZEPTO", "three")
         ledger.setNote(id, "   ")
         assertNull(db.transactions().byId(id)!!.note)
+    }
+
+    // #217: the limits apply to what the ledger stores, whichever reader produced it.
+    @Test fun aMessageWithAHugeAmountIsNotFiledAndAPayeesHiddenCharactersAreRemoved() = runTest {
+        val sms = "Sent Rs.320.00\nFrom HDFC Bank A/C *1234\nTo CALIFORNIA BURRITO\nOn 08/10/26\nRef 412398765012"
+        assertEquals(null, ledger.record(Source.SMS, "AD-HDFCBK", sms.replace("320.00", "9".repeat(300)), 1_000L))
+        val id = ledger.record(Source.SMS, "AD-HDFCBK", sms.replace("CALIFORNIA BURRITO", "CALIFORNIA \u202EBURRITO"), 2_000L)!!
+        assertEquals("CALIFORNIA BURRITO", db.transactions().byId(id)!!.merchant)
     }
 }

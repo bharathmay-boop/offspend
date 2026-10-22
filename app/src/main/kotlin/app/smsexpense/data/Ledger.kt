@@ -1,5 +1,6 @@
 package app.smsexpense.data
 
+import app.smsexpense.core.Bounds
 import app.smsexpense.core.Categorizer
 import app.smsexpense.core.DefaultCategories
 import app.smsexpense.core.Direction
@@ -12,6 +13,7 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** The app's operations on stored money, in one place so screens and receivers share them. */
 class Ledger(
@@ -32,13 +34,13 @@ class Ledger(
      */
     suspend fun record(source: Source, sender: String, body: String, receivedAt: Long, fromInbox: Boolean = false): Long? {
         if (fromInbox && caughtLiveAtAnotherTime(sender, body, receivedAt)) return null
+        val print = fingerprint(source, sender, body, receivedAt)
         val reading = when (val r = SmsParser.parse(source, sender, body)) {
             is SmsReading.Transaction -> r
             // The rules could not read the amount; the on-device model gets one try, and its answer is checked.
-            SmsReading.NotUnderstood -> model?.let { ModelFallback.accept(body, it(ModelFallback.prompt(body))) } ?: return null
+            SmsReading.NotUnderstood -> askModel(body, print) ?: return null
             is SmsReading.Ignored -> return null
-        }
-        val print = fingerprint(source, sender, body, receivedAt)
+        }.let(Bounds::check) ?: return null
         fun seen(txId: Long) = SightingEntity(
             transactionId = txId, source = source.name, sender = sender, merchant = reading.merchant,
             accountLast4 = reading.account, seenAt = receivedAt, fingerprint = print,
@@ -83,6 +85,18 @@ class Ledger(
             )
         }
         return id
+    }
+
+    /**
+     * The model's reading of a message the rules couldn't read (#218). A message already filed isn't sent again, and a
+     * model that is slow to answer is given up on well inside the SMS receiver's deadline; the message is then not
+     * filed, so the next catch-up gives it another try.
+     */
+    private suspend fun askModel(body: String, print: String): SmsReading.Transaction? {
+        val ask = model ?: return null
+        if (db.transactions().fingerprintSeen(print)) return null
+        val answer = withTimeoutOrNull(MODEL_TIMEOUT_MS) { ask(ModelFallback.prompt(body)) }
+        return ModelFallback.accept(body, answer)
     }
 
     /**
@@ -279,6 +293,9 @@ class Ledger(
 
         /** How far apart the inbox's time and the live receiver's time can be for one message. */
         private const val INBOX_TIME_SLACK_MS = 5 * 60 * 1000L
+
+        /** The SMS receiver has about 10 seconds; the model gets half. */
+        const val MODEL_TIMEOUT_MS = 5_000L
         private const val HAND_ADDED_BEFORE_MS = 24 * 60 * 60 * 1000L
         private const val HAND_ADDED_AFTER_MS = 60 * 60 * 1000L
     }
