@@ -145,6 +145,10 @@ A round button at the top right of the home screen opens Settings: a person icon
 
 Settings is one scrolling page with a back button and the title. Sections come in a fixed order: You, Categories, Money, Notifications, Privacy and data, Look, Plus, About. Each is a short label in the primary color over one rounded group (`medium` shape, `surfaceContainer`) of Material 3 list rows: an icon, a title, and the current value under it. A section with no rows yet does not show, so the page never offers something that isn't built. Rows that change a system setting (Payment app alerts) open the system screen and show the new value on return.
 
+**Look › Theme** offers Follow the system (the default), Light or Dark in a dialog of radio rows. A pick applies at once to every open screen and to the status and navigation bar icons, and is remembered on the phone. The money and category colors keep their designed light and dark values either way.
+
+**About** shows the version as "0.1.0 (1)" (the name people see, then the build number Play counts), the privacy policy and the font licences. Both documents ship inside the app and open on a plain reading screen (back button, title, `titleMedium` headings, `bodyLarge` text), so reading them needs no browser or internet. The privacy policy is a copy of `docs/privacy-policy.md`, and a test fails if the two differ. "Send feedback" joins About once the contact email is chosen.
+
 ## Accessibility
 
 - Touch targets at least 48 by 48dp.

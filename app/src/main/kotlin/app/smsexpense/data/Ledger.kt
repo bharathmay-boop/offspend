@@ -1,5 +1,6 @@
 package app.smsexpense.data
 
+import app.smsexpense.core.Bounds
 import app.smsexpense.core.Categorizer
 import app.smsexpense.core.DefaultCategories
 import app.smsexpense.core.Direction
@@ -37,7 +38,7 @@ class Ledger(
             // The rules could not read the amount; the on-device model gets one try, and its answer is checked.
             SmsReading.NotUnderstood -> askModel(body, print) ?: return null
             is SmsReading.Ignored -> return null
-        }
+        }.let(Bounds::check) ?: return null
         fun seen(txId: Long) = SightingEntity(
             transactionId = txId, source = source.name, sender = sender, merchant = reading.merchant,
             accountLast4 = reading.account, seenAt = receivedAt, fingerprint = print,
