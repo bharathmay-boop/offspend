@@ -61,8 +61,8 @@ interface TransactionDao {
     @Query("SELECT merchant FROM transactions WHERE merchant IS NOT NULL AND deleted = 0 GROUP BY merchant ORDER BY MAX(occurredAt) DESC LIMIT 200")
     suspend fun recentPayees(): List<String>
 
-    /** Currencies of payments since a time, newest first, to pick the default for adding by hand. */
-    @Query("SELECT currency FROM transactions WHERE occurredAt >= :since ORDER BY occurredAt DESC")
+    /** Currencies of payments since a time, newest first, to pick the default for adding by hand. Deleted ones don't count (#216). */
+    @Query("SELECT currency FROM transactions WHERE occurredAt >= :since AND deleted = 0 ORDER BY occurredAt DESC")
     suspend fun currenciesSince(since: Long): List<String>
 
     @Query("UPDATE transactions SET note = :note WHERE id = :id")
