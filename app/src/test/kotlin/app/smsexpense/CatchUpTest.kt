@@ -4,12 +4,16 @@ import androidx.test.core.app.ApplicationProvider
 import app.smsexpense.capture.InboxMessage
 import app.smsexpense.core.Source
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 class CatchUpTest {
@@ -69,5 +73,43 @@ class CatchUpTest {
     @Test fun messagesFromBeforeSetupAreLeftToTheHistoryImport() = runTest {
         inbox += payment("OLD SHOP", 10_000L)
         assertEquals(0, app.catchUp(reader))
+    }
+
+    // #219: some SMS apps store a sent time that isn't what the live receiver saw.
+    @Test fun aLivePaymentIsNotFiledAgainWhenTheSmsAppStoresADifferentSentTime() = runTest {
+        val body = payment("BLINKIT", 0).body
+        app.onMessage(Source.SMS, "AD-HDFCBK", body, 2_000_000L)
+        inbox += InboxMessage("AD-HDFCBK", body, receivedAt = 2_095_000L, sentAt = 2_090_000L)
+        assertEquals(0, app.catchUp(reader))
+        assertEquals(1, app.db.transactions().observeAll().first().size)
+    }
+
+    @Test fun twoIdenticalTextsCaughtLiveMinutesApartAreTwoPayments() = runTest {
+        val body = payment("TEA STALL", 0).body
+        app.onMessage(Source.SMS, "AD-HDFCBK", body, 2_000_000L)
+        app.onMessage(Source.SMS, "AD-HDFCBK", body, 2_120_000L)
+        assertEquals(2, app.db.transactions().observeAll().first().size)
+    }
+
+    @Test fun anotherTextFromTheSameBankAtAboutTheSameTimeIsStillFiled() = runTest {
+        app.onMessage(Source.SMS, "AD-HDFCBK", payment("BLINKIT", 0).body, 2_000_000L)
+        inbox += payment("ZEPTO", 2_060_000L)
+        assertEquals(1, app.catchUp(reader))
+    }
+
+    // #218: every app start launches a catch-up; a second one while the first is still reading does nothing.
+    @Test fun aSecondCatchUpWhileOneRunsDoesNothing() = runTest {
+        val reading = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val first = CompletableFuture.supplyAsync { runBlocking { app.catchUp { reading.countDown(); release.await(); emptyList() } } }
+        reading.await(5, TimeUnit.SECONDS)
+        var secondRead = false
+        assertEquals(0, app.catchUp { secondRead = true; emptyList() })
+        release.countDown()
+        first.get(5, TimeUnit.SECONDS)
+        assertEquals(false, secondRead)
+        // Once the first is done, the next one runs as normal.
+        app.catchUp { secondRead = true; emptyList() }
+        assertEquals(true, secondRead)
     }
 }

@@ -65,6 +65,10 @@ interface TransactionDao {
     @Query("SELECT currency FROM transactions WHERE occurredAt >= :since AND deleted = 0 ORDER BY occurredAt DESC")
     suspend fun currenciesSince(since: Long): List<String>
 
+    /** True when this exact message was filed already, as a payment or as a second sighting of one. */
+    @Query("SELECT EXISTS(SELECT 1 FROM transactions WHERE fingerprint = :fingerprint) OR EXISTS(SELECT 1 FROM sightings WHERE fingerprint = :fingerprint)")
+    suspend fun fingerprintSeen(fingerprint: String): Boolean
+
     @Query("UPDATE transactions SET note = :note WHERE id = :id")
     suspend fun setNote(id: Long, note: String?)
 }
@@ -106,6 +110,10 @@ interface SightingDao {
 
     @Query("SELECT * FROM sightings WHERE transactionId = :transactionId ORDER BY seenAt, id")
     suspend fun forTransaction(transactionId: Long): List<SightingEntity>
+
+    /** One sender's sightings in a time window, deleted payments' too (#219). */
+    @Query("SELECT * FROM sightings WHERE source = :source AND sender = :sender AND seenAt BETWEEN :from AND :to")
+    suspend fun fromSenderNear(source: String, sender: String, from: Long, to: Long): List<SightingEntity>
 
     @Query("UPDATE sightings SET transactionId = :transactionId WHERE fingerprint = :fingerprint")
     suspend fun moveTo(fingerprint: String, transactionId: Long)
