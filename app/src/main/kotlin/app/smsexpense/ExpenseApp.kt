@@ -18,6 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 
 class ExpenseApp : Application() {
     // ponytail: one database and ledger on the Application, add DI if the graph grows
@@ -86,6 +87,18 @@ class ExpenseApp : Application() {
      */
     suspend fun catchUp(readInbox: (Long) -> List<InboxMessage> = InboxImporter.systemInbox(this)): Int {
         if (!prefs.getBoolean(KEY_HISTORY_DONE, false)) return 0
+        // Every app start launches one; a second while the first runs would read and file the same messages again (#218).
+        if (!catchingUp.tryLock()) return 0
+        try {
+            return readMissed(readInbox)
+        } finally {
+            catchingUp.unlock()
+        }
+    }
+
+    private val catchingUp = Mutex()
+
+    private suspend fun readMissed(readInbox: (Long) -> List<InboxMessage>): Int {
         // Overlap by a minute; the fingerprint stops anything already saved from being saved twice.
         val since = prefs.getLong(KEY_LAST_SEEN, 0L) - 60_000
         val messages = readInbox(since)

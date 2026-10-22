@@ -65,6 +65,10 @@ interface TransactionDao {
     @Query("SELECT currency FROM transactions WHERE occurredAt >= :since AND deleted = 0 ORDER BY occurredAt DESC")
     suspend fun currenciesSince(since: Long): List<String>
 
+    /** True when this exact message was filed already, as a payment or as a second sighting of one. */
+    @Query("SELECT EXISTS(SELECT 1 FROM transactions WHERE fingerprint = :fingerprint) OR EXISTS(SELECT 1 FROM sightings WHERE fingerprint = :fingerprint)")
+    suspend fun fingerprintSeen(fingerprint: String): Boolean
+
     @Query("UPDATE transactions SET note = :note WHERE id = :id")
     suspend fun setNote(id: Long, note: String?)
 }
