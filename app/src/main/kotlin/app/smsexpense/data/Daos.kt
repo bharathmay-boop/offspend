@@ -111,6 +111,10 @@ interface SightingDao {
     @Query("SELECT * FROM sightings WHERE transactionId = :transactionId ORDER BY seenAt, id")
     suspend fun forTransaction(transactionId: Long): List<SightingEntity>
 
+    /** One sender's sightings in a time window, deleted payments' too (#219). */
+    @Query("SELECT * FROM sightings WHERE source = :source AND sender = :sender AND seenAt BETWEEN :from AND :to")
+    suspend fun fromSenderNear(source: String, sender: String, from: Long, to: Long): List<SightingEntity>
+
     @Query("UPDATE sightings SET transactionId = :transactionId WHERE fingerprint = :fingerprint")
     suspend fun moveTo(fingerprint: String, transactionId: Long)
 }

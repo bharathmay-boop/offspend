@@ -76,7 +76,7 @@ class ExpenseApp : Application() {
     private suspend fun readHistory(readInbox: (Long) -> List<InboxMessage>) {
         try {
             val since = System.currentTimeMillis() - InboxImporter.HISTORY_DAYS * 24 * 60 * 60 * 1000
-            val found = InboxImporter(readInbox) { s, from, body, at -> onMessage(s, from, body, at, notify = false) }.importSince(since)
+            val found = InboxImporter(readInbox) { s, from, body, at -> onMessage(s, from, body, at, notify = false, fromInbox = true) }.importSince(since)
             prefs.edit().putBoolean(KEY_HISTORY_DONE, true).putLong(KEY_LAST_SEEN, System.currentTimeMillis()).apply()
             _history.value = History.Done(found)
         } catch (e: CancellationException) {
@@ -113,7 +113,7 @@ class ExpenseApp : Application() {
         // Overlap by a minute; the fingerprint stops anything already saved from being saved twice.
         val since = prefs.getLong(KEY_LAST_SEEN, 0L) - 60_000
         val messages = readInbox(since)
-        val found = InboxImporter({ messages }) { s, from, body, at -> onMessage(s, from, body, at, notify = false) }.importSince(since)
+        val found = InboxImporter({ messages }) { s, from, body, at -> onMessage(s, from, body, at, notify = false, fromInbox = true) }.importSince(since)
         messages.maxOfOrNull { it.receivedAt }?.let { markSeen(it) }
         return found
     }
@@ -131,8 +131,8 @@ class ExpenseApp : Application() {
     }
 
     /** Every captured message goes through here. Returns the saved transaction's id, or null. */
-    suspend fun onMessage(source: Source, sender: String, body: String, receivedAt: Long, notify: Boolean = true): Long? {
-        val id = ledger.record(source, sender, body, receivedAt) ?: return null
+    suspend fun onMessage(source: Source, sender: String, body: String, receivedAt: Long, notify: Boolean = true, fromInbox: Boolean = false): Long? {
+        val id = ledger.record(source, sender, body, receivedAt, fromInbox) ?: return null
         if (notify) {
             val tx = db.transactions().byId(id) ?: return id
             if (tx.deleted) {

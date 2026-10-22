@@ -29,9 +29,11 @@ class Ledger(
 
     /**
      * Reads one message and, if it is a transaction, saves it with a suggested category.
+     * [fromInbox] is true for messages read back from the SMS inbox (first import and catch-up) rather than caught live.
      * @return the new transaction's id, or null when the message was ignored or already saved.
      */
-    suspend fun record(source: Source, sender: String, body: String, receivedAt: Long): Long? {
+    suspend fun record(source: Source, sender: String, body: String, receivedAt: Long, fromInbox: Boolean = false): Long? {
+        if (fromInbox && caughtLiveAtAnotherTime(sender, body, receivedAt)) return null
         val print = fingerprint(source, sender, body, receivedAt)
         val reading = when (val r = SmsParser.parse(source, sender, body)) {
             is SmsReading.Transaction -> r
@@ -130,6 +132,17 @@ class Ledger(
         db.transactions()
             .seenFromAppNear(app, reading.merchant, reading.direction, reading.money.currency, at - TWIN_WINDOW_MS, at + TWIN_WINDOW_MS)
             .any { it.amount.compareTo(reading.money.amount) == 0 }
+
+    /**
+     * The inbox gives a message's sent time, which is what the live receiver saw, unless the SMS app stored something
+     * else there (#219). So a message from the inbox also counts as filed when this sender's text with the very same
+     * body was filed live within a few minutes: its fingerprint, worked out at that sighting's own time, matches.
+     * Only for inbox reads: two real payments can have identical texts minutes apart, and live capture sees both.
+     */
+    // ponytail: identical texts from one sender within 5 minutes, one missed live, would file once; store a body-only hash if that shows up
+    private suspend fun caughtLiveAtAnotherTime(sender: String, body: String, at: Long): Boolean =
+        db.sightings().fromSenderNear(Source.SMS.name, sender, at - INBOX_TIME_SLACK_MS, at + INBOX_TIME_SLACK_MS)
+            .any { it.seenAt != at && it.fingerprint == fingerprint(Source.SMS, sender, body, it.seenAt) }
 
     private fun fingerprint(source: Source, sender: String, body: String, receivedAt: Long): String =
         MessageDigest.getInstance("SHA-256")
@@ -277,6 +290,9 @@ class Ledger(
         /** The longest note kept, in characters. */
         const val NOTE_MAX = 200
         private const val TWIN_WINDOW_MS = 10 * 60 * 1000L
+
+        /** How far apart the inbox's time and the live receiver's time can be for one message. */
+        private const val INBOX_TIME_SLACK_MS = 5 * 60 * 1000L
 
         /** The SMS receiver has about 10 seconds; the model gets half. */
         const val MODEL_TIMEOUT_MS = 5_000L
