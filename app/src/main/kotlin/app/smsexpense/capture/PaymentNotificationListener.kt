@@ -3,6 +3,9 @@ package app.smsexpense.capture
 import android.app.Notification
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationManagerCompat
@@ -54,6 +57,15 @@ class PaymentNotificationListener : NotificationListenerService() {
             context.packageName in NotificationManagerCompat.getEnabledListenerPackages(context)
 
         fun component(context: Context) = ComponentName(context, PaymentNotificationListener::class.java)
+
+        /** The system screen where the person turns this listener on or off. Android 10 and older only have the list of all listeners. */
+        fun settingsIntent(context: Context): Intent =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+                    .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, component(context).flattenToString())
+            } else {
+                Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+            }
     }
 }
 
