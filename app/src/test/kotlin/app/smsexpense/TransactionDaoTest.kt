@@ -44,4 +44,12 @@ class TransactionDaoTest {
         assertEquals(-1L, db.transactions().insert(tx("same")))
         assertEquals(1, db.transactions().observeAll().first().size)
     }
+
+    // #216: a currency only a deleted payment used isn't offered as the default.
+    @Test fun aDeletedPaymentsCurrencyIsNotCounted() = runTest {
+        db.transactions().insert(tx("inr"))
+        val usd = db.transactions().insert(tx("usd").copy(currency = "USD", occurredAt = 1_760_000_100_000))
+        db.transactions().setDeleted(usd, true)
+        assertEquals(listOf("INR"), db.transactions().currenciesSince(0))
+    }
 }

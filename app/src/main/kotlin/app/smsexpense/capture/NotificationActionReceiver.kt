@@ -25,6 +25,12 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
     companion object {
         suspend fun handle(app: ExpenseApp, intent: Intent, txId: Long) {
+            // An old notification for a payment deleted in the app since: its buttons do nothing but clear it (#216).
+            // "No, add it" is the exception, since its bank copy is hidden on purpose until then.
+            if (intent.action != TransactionNotifier.ACTION_SEPARATE && app.db.transactions().byId(txId)?.deleted != false) {
+                TransactionNotifier.dismiss(app, txId)
+                return
+            }
             when (intent.action) {
                 TransactionNotifier.ACTION_CONFIRM -> {
                     val categoryId = intent.getLongExtra(TransactionNotifier.EXTRA_CATEGORY, -1)

@@ -151,4 +151,26 @@ class NotificationTest {
         app.onMessage(Source.SMS, "AD-HDFCBK", payment, 8_000L)
         assertEquals(listOf(true, true), notifications.single().actions.map { it.isAuthenticationRequired })
     }
+
+    // #216: deleting in the app, then tapping the payment's old notification, must not change the hidden row.
+    @Test fun theButtonsOfADeletedPaymentOnlyClearItsNotification() = runTest {
+        val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 7_000L)!!
+        val guessed = app.db.transactions().byId(id)!!.categoryId
+        app.ledger.delete(id)
+        NotificationActionReceiver.handle(
+            app, Intent(TransactionNotifier.ACTION_CONFIRM).putExtra(TransactionNotifier.EXTRA_CATEGORY, app.db.categories().byName("Groceries")!!.id), id,
+        )
+        val note = Intent(TransactionNotifier.ACTION_NOTE)
+        RemoteInput.addResultsToIntent(
+            arrayOf(RemoteInput.Builder(TransactionNotifier.KEY_NOTE).build()), note,
+            Bundle().apply { putCharSequence(TransactionNotifier.KEY_NOTE, "lunch") },
+        )
+        NotificationActionReceiver.handle(app, note, id)
+        val row = app.db.transactions().byId(id)!!
+        assertEquals(guessed, row.categoryId)
+        assertEquals(false, row.confirmed)
+        assertEquals(null, row.note)
+        assertTrue(app.db.merchantRules().all().isEmpty())
+        assertTrue(notifications.isEmpty())
+    }
 }
