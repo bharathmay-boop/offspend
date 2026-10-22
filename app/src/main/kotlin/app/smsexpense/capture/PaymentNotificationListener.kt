@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 class PaymentNotificationListener : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         if (!PaymentApps.isPaymentApp(sbn.packageName)) return
+        if (isConversation(sbn.notification)) return
         val extras = sbn.notification.extras
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = (extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty()
@@ -33,6 +34,16 @@ class PaymentNotificationListener : NotificationListenerService() {
 
     companion object {
         private const val MAX_SKEW_MS = 10 * 60 * 1000L
+
+        /**
+         * A chat message inside a payment app (Google Pay and PhonePe both have chat) is text another person wrote,
+         * so "Paid Rs 5000 to Amazon" from a contact must not be filed as the owner's payment (#190). Android marks
+         * these as messages or conversations; the app's own payment alerts aren't.
+         */
+        fun isConversation(n: Notification): Boolean =
+            n.category == Notification.CATEGORY_MESSAGE ||
+                n.extras.getString(Notification.EXTRA_TEMPLATE) == Notification.MessagingStyle::class.java.name ||
+                n.extras.containsKey(Notification.EXTRA_MESSAGES)
 
         /**
          * The app's own timestamp stays the same when it updates a notification, so it is used when it is close to
