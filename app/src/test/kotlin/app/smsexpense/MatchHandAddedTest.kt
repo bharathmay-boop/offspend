@@ -141,4 +141,15 @@ class MatchHandAddedTest {
         app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)
         assertEquals(listOf(false, true), notifications.single().actions.map { it.isAuthenticationRequired })
     }
+
+    // #220: the same-payment question names the amount and payee too, so a locked phone shows only that a payment was found.
+    @Test fun theSamePaymentQuestionIsHiddenOnALockedPhone() = runTest {
+        addByHand(t0)
+        app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)
+        val n = notifications.single()
+        assertEquals(Notification.VISIBILITY_PRIVATE, n.visibility)
+        val public = n.publicVersion!!
+        val shown = public.extras.getString("android.title") + public.extras.getString("android.text")
+        assertEquals(TransactionNotifier.LOCKED_TITLE + TransactionNotifier.LOCKED_TEXT, shown)
+    }
 }
