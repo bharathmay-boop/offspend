@@ -8,16 +8,19 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.content.pm.PackageInfoCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.smsexpense.capture.PaymentNotificationListener
 import app.smsexpense.ui.SettingsRow
 import app.smsexpense.ui.SettingsScreen
 import app.smsexpense.ui.SettingsSection
+import app.smsexpense.ui.ThemeDialog
 import app.smsexpense.ui.theme.ExpenseTheme
 
 /** Settings, opened from the round button at the top right of the home screen (#77). */
@@ -25,6 +28,7 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        val app = application as ExpenseApp
         setContent {
             ExpenseTheme {
                 Surface(Modifier.fillMaxSize()) {
@@ -34,6 +38,8 @@ class SettingsActivity : ComponentActivity() {
                         alertsOn = PaymentNotificationListener.isEnabled(this@SettingsActivity)
                         onPauseOrDispose {}
                     }
+                    val theme by app.theme.collectAsState()
+                    var choosingTheme by remember { mutableStateOf(false) }
                     // Sections in the epic's order (#76). Each fills in as its feature lands; empty ones don't show.
                     SettingsScreen(
                         sections = listOf(
@@ -49,15 +55,36 @@ class SettingsActivity : ComponentActivity() {
                                 ),
                             ),
                             SettingsSection("Privacy and data", emptyList()),
-                            SettingsSection("Look", emptyList()),
+                            SettingsSection("Look", listOf(SettingsRow(R.drawable.ic_palette, "Theme", theme.label) { choosingTheme = true })),
                             SettingsSection("Plus", emptyList()),
-                            SettingsSection("About", emptyList()),
+                            // "Send feedback" joins these once the contact email is chosen (#100, #104).
+                            SettingsSection(
+                                "About",
+                                listOf(
+                                    SettingsRow(R.drawable.ic_info, "Version", versionLabel(), onClick = null),
+                                    SettingsRow(R.drawable.ic_lock, "Privacy policy", null) {
+                                        startActivity(DocumentActivity.privacyPolicy(this@SettingsActivity))
+                                    },
+                                    SettingsRow(R.drawable.ic_description, "Open source licences", "Bricolage Grotesque, Inter") {
+                                        startActivity(DocumentActivity.licences(this@SettingsActivity))
+                                    },
+                                ),
+                            ),
                         ),
                         onBack = ::finish,
                     )
+                    if (choosingTheme) {
+                        ThemeDialog(theme, onPick = { app.setTheme(it); choosingTheme = false }, onDismiss = { choosingTheme = false })
+                    }
                 }
             }
         }
+    }
+
+    /** "0.1.0 (1)": the version name people see, and the build number Play counts. */
+    private fun versionLabel(): String {
+        val info = packageManager.getPackageInfo(packageName, 0)
+        return "${info.versionName} (${PackageInfoCompat.getLongVersionCode(info)})"
     }
 
     companion object {

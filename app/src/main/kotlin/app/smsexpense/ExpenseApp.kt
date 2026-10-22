@@ -10,6 +10,7 @@ import app.smsexpense.core.Source
 import app.smsexpense.data.AppDatabase
 import app.smsexpense.data.Ledger
 import app.smsexpense.data.TransactionEntity
+import app.smsexpense.ui.theme.ThemeChoice
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +27,16 @@ class ExpenseApp : Application() {
     // A failure in background capture must never crash the app. Only the exception type is logged, never message text.
     private val contained = CoroutineExceptionHandler { _, e -> Log.w("ExpenseApp", "background work failed: ${e.javaClass.simpleName}") }
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + contained)
+
+    private val uiPrefs by lazy { getSharedPreferences("ui", MODE_PRIVATE) }
+
+    /** Look › Theme, remembered on the phone (#84). Every open screen follows a change at once. */
+    val theme by lazy { MutableStateFlow(ThemeChoice.entries.firstOrNull { it.name == uiPrefs.getString(KEY_THEME, null) } ?: ThemeChoice.SYSTEM) }
+
+    fun setTheme(choice: ThemeChoice) {
+        uiPrefs.edit().putString(KEY_THEME, choice.name).apply()
+        theme.value = choice
+    }
 
     /** The entry just deleted from a sheet, so the home screen can offer Undo (#52). */
     val justDeleted = MutableStateFlow<Long?>(null)
@@ -130,6 +141,7 @@ class ExpenseApp : Application() {
     private companion object {
         const val KEY_HISTORY_DONE = "history_done"
         const val KEY_LAST_SEEN = "last_seen_sms"
+        const val KEY_THEME = "theme"
     }
 }
 
