@@ -71,7 +71,7 @@ class ThemeAndAboutTest {
     // A tall phone, so the About rows are on screen without scrolling.
     @Test @Config(qualifiers = "w411dp-h891dp") fun aboutShowsTheVersionPolicyAndLicences() {
         ActivityScenario.launch(SettingsActivity::class.java).use {
-            compose.onNodeWithText("0.1.0 (1)").assertExists()
+            compose.onNodeWithText("0.1.1 (2)").assertExists()
             compose.onNodeWithText("Open source licences").assertExists()
             compose.onNodeWithText("Privacy policy").performClick()
             assertEquals(DocumentActivity::class.java.name, shadowOf(app).nextStartedActivity?.component?.className)

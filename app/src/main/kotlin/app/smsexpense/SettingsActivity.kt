@@ -81,7 +81,7 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    /** "0.1.0 (1)": the version name people see, and the build number Play counts. */
+    /** "0.1.1 (2)": the version name people see, and the build number Play counts. */
     private fun versionLabel(): String {
         val info = packageManager.getPackageInfo(packageName, 0)
         return "${info.versionName} (${PackageInfoCompat.getLongVersionCode(info)})"
