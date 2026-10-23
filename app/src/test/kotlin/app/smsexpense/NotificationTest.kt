@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.smsexpense.capture.NotificationActionReceiver
 import app.smsexpense.capture.TransactionNotifier
 import app.smsexpense.core.Categorizer
+import app.smsexpense.core.Direction
 import app.smsexpense.core.Source
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -183,5 +184,24 @@ class NotificationTest {
         assertEquals(TransactionNotifier.LOCKED_TITLE, public.extras.getString("android.title"))
         val shown = public.extras.getString("android.title") + public.extras.getString("android.text")
         assertTrue(listOf("320", "Burrito", "BURRITO").none { it in shown })
+    }
+
+    // #233: a payment app can rename the payee after the notification was posted; a tap on the old button must not teach the new name.
+    @Test fun aConfirmFromBeforeThePayeeWasRenamedTeachesNothingForTheNewName() = runTest {
+        val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 1_000L)!!
+        val confirm = shadowOf(notifications.single().actions[0].actionIntent).savedIntent
+        app.onMessage(Source.NOTIFICATION, "com.google.android.apps.nbu.paisa.user", "Paid ₹320 to Amazon", 61_000L)
+        assertEquals("Amazon", app.db.transactions().byId(id)!!.merchant)
+        assertEquals("Shopping", app.ledger.guessCategory("Amazon", Direction.DEBIT)?.name)
+
+        NotificationActionReceiver.handle(app, confirm, id)
+
+        assertEquals("Shopping", app.ledger.guessCategory("Amazon", Direction.DEBIT)?.name)
+    }
+
+    @Test fun aConfirmForThePayeeThatWasShownStillTeachesIt() = runTest {
+        val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 1_000L)!!
+        NotificationActionReceiver.handle(app, shadowOf(notifications.single().actions[0].actionIntent).savedIntent, id)
+        assertTrue(app.db.merchantRules().all().any { it.merchantKey == Categorizer.merchantKey("California Burrito") })
     }
 }
