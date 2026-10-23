@@ -72,7 +72,8 @@ object SmsParser {
     private fun readMoney(text: String, defaultCurrency: String): Money? {
         for (m in moneyWithCurrency.findAll(text)) {
             if (notTheAmount.containsMatchIn(text.substring(0, m.range.first))) continue
-            val code = currencyCodes.getValue(m.groupValues[1].lowercase())
+            // Case-insensitive matching also accepts look-alike letters (a long s for "s"); those are not a currency we know (#236).
+            val code = currencyCodes[m.groupValues[1].lowercase()] ?: continue
             return Money(toDecimal(m.groupValues[2], m.groupValues[3]), code)
         }
         val bare = bareAmountAfterVerb.find(text) ?: return null

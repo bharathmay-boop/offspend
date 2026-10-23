@@ -3,6 +3,7 @@ package app.smsexpense.capture
 import android.content.Context
 import android.provider.Telephony
 import app.smsexpense.core.Source
+import app.smsexpense.eachContained
 
 /**
  * One message from the phone's SMS inbox.
@@ -20,8 +21,12 @@ class InboxImporter(
     private val onMessage: suspend (Source, String, String, Long) -> Long?,
 ) {
     /** @return how many new transactions were saved. */
-    suspend fun importSince(sinceMillis: Long): Int =
-        readInbox(sinceMillis).count { onMessage(Source.SMS, it.sender, it.body, it.sentAt) != null }
+    suspend fun importSince(sinceMillis: Long): Int {
+        var saved = 0
+        // One message that fails is skipped, as on the live path, so it cannot hide the rest or pin the catch-up cursor (#236).
+        eachContained(readInbox(sinceMillis)) { if (onMessage(Source.SMS, it.sender, it.body, it.sentAt) != null) saved++ }
+        return saved
+    }
 
     companion object {
         const val HISTORY_DAYS = 90L

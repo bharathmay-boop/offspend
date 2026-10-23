@@ -112,4 +112,12 @@ class CatchUpTest {
         app.catchUp { secondRead = true; emptyList() }
         assertEquals(true, secondRead)
     }
+
+    // #236: a text with a look-alike letter in "Rs" used to throw out of the parser and block every later catch-up.
+    @Test fun aTextThatTheParserCannotReadDoesNotBlockLaterPayments() = runTest {
+        inbox += InboxMessage("AD-SPOOF", "R${0x17F.toChar()} 1 debited", 2_000_000L)
+        inbox += payment("MISSED1", 3_000_000L)
+        assertEquals(1, app.catchUp(reader))
+        assertEquals("MISSED1", app.db.transactions().observeAll().first().single().merchant)
+    }
 }

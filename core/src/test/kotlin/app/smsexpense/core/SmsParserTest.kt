@@ -55,4 +55,12 @@ class SmsParserTest {
             assertEquals(text, currency, got.money.currency)
         }
     }
+
+    // #236: case-insensitive matching also accepts look-alike letters, and a currency word nobody listed must not throw.
+    @Test fun aCurrencyWordWithALookAlikeLetterIsNotAnError() {
+        val longS = 0x17F.toChar()
+        for (text in listOf("R$longS 500 debited from a/c XX1234 at AMAZON", "K${longS}h 500 debited from a/c XX1234 at AMAZON")) {
+            assertEquals(text, SmsReading.NotUnderstood, SmsParser.parse(Source.SMS, "AD-HDFCBK", text))
+        }
+    }
 }
