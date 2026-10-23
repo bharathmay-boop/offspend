@@ -2,6 +2,7 @@ package app.smsexpense
 
 import android.Manifest
 import android.app.Notification
+import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
@@ -173,5 +174,18 @@ class MatchHandAddedTest {
         app.ledger.delete(bank)
         NotificationActionReceiver.handle(app, Intent(TransactionNotifier.ACTION_SEPARATE), bank)
         assertEquals(listOf(manual), visible().map { it.id })
+    }
+
+    // #237: "No, add it" adds an expense, so it waits for unlock too.
+    @Test fun noAddItOnALockedPhoneAddsNothing() = runTest {
+        addByHand(t0)
+        val bank = app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)!!
+        val keyguard = shadowOf(app.getSystemService(KeyguardManager::class.java))
+        keyguard.setIsDeviceLocked(true)
+        NotificationActionReceiver.handle(app, Intent(TransactionNotifier.ACTION_SEPARATE), bank)
+        assertEquals(1, visible().size)
+        keyguard.setIsDeviceLocked(false)
+        NotificationActionReceiver.handle(app, Intent(TransactionNotifier.ACTION_SEPARATE), bank)
+        assertEquals(2, visible().size)
     }
 }

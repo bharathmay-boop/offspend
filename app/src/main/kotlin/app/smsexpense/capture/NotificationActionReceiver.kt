@@ -27,8 +27,8 @@ class NotificationActionReceiver : BroadcastReceiver() {
     companion object {
         suspend fun handle(app: ExpenseApp, intent: Intent, txId: Long) {
             // From Android 12 the system makes these buttons wait for unlock. On Android 8 to 11 it does not, so a locked phone must
-            // not change the ledger from its lock screen. The notification stays, and the person taps it again once unlocked (#237).
-            if (intent.action != TransactionNotifier.ACTION_SAME && app.getSystemService(KeyguardManager::class.java)?.isDeviceLocked == true) {
+            // not change the ledger from its lock screen (a missing service counts as locked). The notification stays, and the person taps it again once unlocked (#237).
+            if (intent.action != TransactionNotifier.ACTION_SAME && app.getSystemService(KeyguardManager::class.java)?.isDeviceLocked != false) {
                 if (intent.action == TransactionNotifier.ACTION_NOTE) app.db.transactions().byId(txId)?.let { app.showPayment(it) }
                 return
             }

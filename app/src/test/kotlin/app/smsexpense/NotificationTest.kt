@@ -220,4 +220,17 @@ class NotificationTest {
         NotificationActionReceiver.handle(app, confirm, id)
         assertEquals(true, app.db.transactions().byId(id)!!.confirmed)
     }
+
+    @Test fun aNoteRepliedOnALockedPhoneIsNotSavedAndTheNotificationStays() = runTest {
+        val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 1_000L)!!
+        shadowOf(app.getSystemService(KeyguardManager::class.java)).setIsDeviceLocked(true)
+        val reply = Intent(TransactionNotifier.ACTION_NOTE)
+        RemoteInput.addResultsToIntent(
+            arrayOf(RemoteInput.Builder(TransactionNotifier.KEY_NOTE).build()), reply,
+            Bundle().apply { putCharSequence(TransactionNotifier.KEY_NOTE, "lunch") },
+        )
+        NotificationActionReceiver.handle(app, reply, id)
+        assertEquals(null, app.db.transactions().byId(id)!!.note)
+        assertEquals(1, notifications.size)
+    }
 }
