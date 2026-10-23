@@ -37,7 +37,7 @@ class Ledger(
         val print = fingerprint(source, sender, fullBody, receivedAt)
         // Bank alerts are a few hundred characters. Only the start of a far longer text is read, so one cannot keep the parser busy (#235).
         // The fingerprint still covers the whole text, so two different messages never look like one.
-        val body = fullBody.take(MESSAGE_MAX)
+        val body = fullBody.take(MESSAGE_MAX).dropLastWhile { it.isHighSurrogate() }
         val reading = when (val r = SmsParser.parse(source, sender, body)) {
             is SmsReading.Transaction -> r
             // The rules could not read the amount; the on-device model gets one try, and its answer is checked.

@@ -135,4 +135,18 @@ class LedgerTest {
         val second = ledger.record(Source.SMS, "AD-HDFCBK", start + "two", 1_000L)
         assertTrue(first != null && second != null && first != second)
     }
+
+    // The duplicate check between a live text and its inbox copy works on the fingerprint of the whole text, long or not.
+    @Test fun aLongTextCaughtLiveIsNotFiledAgainFromTheInbox() = runTest {
+        val sms = "Sent Rs.320.00NLFrom HDFC Bank A/C *1234NLTo CALIFORNIA BURRITONLOn 08/10/26NLRef 412398765012".replace("NL", 10.toChar().toString())
+        val long = sms + " Thank you. ".repeat(300)
+        assertTrue(ledger.record(Source.SMS, "AD-HDFCBK", long, 1_000L) != null)
+        assertEquals(null, ledger.record(Source.SMS, "AD-HDFCBK", long, 1_000L, fromInbox = true))
+    }
+
+    @Test fun aCutThroughAnEmojiLeavesNoHalfCharacterForTheParser() = runTest {
+        val sms = "Sent Rs.320.00NLFrom HDFC Bank A/C *1234NLTo CALIFORNIA BURRITONLOn 08/10/26NLRef 412398765012".replace("NL", 10.toChar().toString())
+        val padded = sms + "x".repeat(Ledger.MESSAGE_MAX - sms.length - 1) + String(Character.toChars(0x1F600)) + " tail"
+        assertTrue(ledger.record(Source.SMS, "AD-HDFCBK", padded, 3_000L) != null)
+    }
 }
