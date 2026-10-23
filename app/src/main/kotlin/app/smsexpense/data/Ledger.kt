@@ -109,11 +109,11 @@ class Ledger(
             .unmatchedHandAdded(reading.direction, reading.money.currency, at - HAND_ADDED_BEFORE_MS, at + HAND_ADDED_AFTER_MS)
             .firstOrNull { it.amount.compareTo(reading.money.amount) == 0 }
 
-    /** The hand-added entry a hidden bank entry was matched with, for the notification. */
+    /** The live hand-added entry a hidden bank entry was matched with, for the notification. A deleted one is no longer a pair (#232). */
     suspend fun handAddedTwinOf(bank: TransactionEntity): TransactionEntity? =
         db.transactions()
             .fromOtherSourcesNear(bank.direction, bank.currency, bank.source, bank.occurredAt - HAND_ADDED_BEFORE_MS, bank.occurredAt + HAND_ADDED_AFTER_MS)
-            .firstOrNull { it.source == MANUAL && it.fingerprint.startsWith("manual-matched-") && it.amount.compareTo(bank.amount) == 0 }
+            .firstOrNull { it.source == MANUAL && !it.deleted && it.fingerprint.startsWith("manual-matched-") && it.amount.compareTo(bank.amount) == 0 }
 
     /**
      * The bank SMS and the payment app's notification often both report one payment.

@@ -152,4 +152,14 @@ class MatchHandAddedTest {
         val shown = public.extras.getString("android.title") + public.extras.getString("android.text")
         assertEquals(TransactionNotifier.LOCKED_TITLE + TransactionNotifier.LOCKED_TEXT, shown)
     }
+
+    // #232: deleting a hand-added payment that the bank text was matched to deletes the pair; a later real payment must still count.
+    @Test fun aDeletedMatchedPairDoesNotSwallowALaterPaymentFromTheOtherSource() = runTest {
+        val manual = addByHand(t0, amount = "320", payee = "Tea")
+        app.onMessage(Source.SMS, "AD-HDFCBK", sms.replace("420.00", "320.00"), t0 + 60_000)
+        app.ledger.delete(manual)
+        val filed = app.onMessage(Source.NOTIFICATION, "com.google.android.apps.nbu.paisa.user", "Paid ₹320 to NEWSHOP", t0 + 3 * 60_000)
+        assertEquals(listOf("NEWSHOP"), visible().map { it.merchant })
+        assertEquals(visible().single().id, filed)
+    }
 }
