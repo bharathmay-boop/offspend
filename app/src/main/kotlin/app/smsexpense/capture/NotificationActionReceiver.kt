@@ -31,6 +31,15 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 TransactionNotifier.dismiss(app, txId)
                 return
             }
+            // "No, add it" brings back a bank copy that is hidden behind a hand-added entry. A bank copy that is live, or deleted by
+            // the person, is not that, so an old button does nothing to it (#234).
+            if (intent.action == TransactionNotifier.ACTION_SEPARATE) {
+                val bank = app.db.transactions().byId(txId)
+                if (bank == null || !bank.deleted || app.ledger.handAddedTwinOf(bank) == null) {
+                    TransactionNotifier.dismiss(app, txId)
+                    return
+                }
+            }
             when (intent.action) {
                 TransactionNotifier.ACTION_CONFIRM -> {
                     val categoryId = intent.getLongExtra(TransactionNotifier.EXTRA_CATEGORY, -1)
