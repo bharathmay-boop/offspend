@@ -1,5 +1,6 @@
 package app.smsexpense.capture
 
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -25,6 +26,12 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
     companion object {
         suspend fun handle(app: ExpenseApp, intent: Intent, txId: Long) {
+            // From Android 12 the system makes these buttons wait for unlock. On Android 8 to 11 it does not, so a locked phone must
+            // not change the ledger from its lock screen. The notification stays, and the person taps it again once unlocked (#237).
+            if (intent.action != TransactionNotifier.ACTION_SAME && app.getSystemService(KeyguardManager::class.java)?.isDeviceLocked == true) {
+                if (intent.action == TransactionNotifier.ACTION_NOTE) app.db.transactions().byId(txId)?.let { app.showPayment(it) }
+                return
+            }
             // An old notification for a payment deleted in the app since: its buttons do nothing but clear it (#216).
             // "No, add it" is the exception, since its bank copy is hidden on purpose until then.
             if (intent.action != TransactionNotifier.ACTION_SEPARATE && app.db.transactions().byId(txId)?.deleted != false) {
