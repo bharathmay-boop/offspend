@@ -54,4 +54,16 @@ class InboxImporterTest {
     @Test fun onlyReadsFromTheStartTime() = runTest {
         assertEquals(1, importer(inbox).importSince(3_500L))
     }
+
+    // #236: one message that fails must not stop the import or hide the ones after it.
+    @Test fun aMessageThatThrowsIsSkippedAndTheRestAreStillFiled() = runTest {
+        val poison = InboxMessage("AD-SPOOF", "poison", 500L)
+        val messages = listOf(poison) + inbox
+        val importer = InboxImporter(
+            { since -> messages.filter { it.receivedAt >= since } },
+            { s, from, body, at -> if (body == "poison") error("boom") else app.onMessage(s, from, body, at, notify = false) },
+        )
+        assertEquals(2, importer.importSince(0))
+        assertEquals(2, app.db.transactions().observeAll().first().size)
+    }
 }
