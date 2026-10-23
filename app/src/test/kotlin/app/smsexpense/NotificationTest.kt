@@ -3,6 +3,7 @@ package app.smsexpense
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.KeyguardManager
 import android.content.Intent
 import android.os.Bundle
 import androidx.core.app.RemoteInput
@@ -203,5 +204,33 @@ class NotificationTest {
         val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 1_000L)!!
         NotificationActionReceiver.handle(app, shadowOf(notifications.single().actions[0].actionIntent).savedIntent, id)
         assertTrue(app.db.merchantRules().all().any { it.merchantKey == Categorizer.merchantKey("California Burrito") })
+    }
+
+    // #237: on Android 8 to 11 the system does not make a button wait for unlock, so the receiver refuses to change the ledger while the phone is locked.
+    @Test fun aButtonTappedOnALockedPhoneChangesNothingUntilTheDeviceIsUnlocked() = runTest {
+        val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 1_000L)!!
+        val confirm = shadowOf(notifications.single().actions[0].actionIntent).savedIntent
+        val keyguard = shadowOf(app.getSystemService(KeyguardManager::class.java))
+        keyguard.setIsDeviceLocked(true)
+        NotificationActionReceiver.handle(app, confirm, id)
+        assertEquals(false, app.db.transactions().byId(id)!!.confirmed)
+        assertEquals(1, notifications.size)
+
+        keyguard.setIsDeviceLocked(false)
+        NotificationActionReceiver.handle(app, confirm, id)
+        assertEquals(true, app.db.transactions().byId(id)!!.confirmed)
+    }
+
+    @Test fun aNoteRepliedOnALockedPhoneIsNotSavedAndTheNotificationStays() = runTest {
+        val id = app.onMessage(Source.SMS, "AD-HDFCBK", payment, 1_000L)!!
+        shadowOf(app.getSystemService(KeyguardManager::class.java)).setIsDeviceLocked(true)
+        val reply = Intent(TransactionNotifier.ACTION_NOTE)
+        RemoteInput.addResultsToIntent(
+            arrayOf(RemoteInput.Builder(TransactionNotifier.KEY_NOTE).build()), reply,
+            Bundle().apply { putCharSequence(TransactionNotifier.KEY_NOTE, "lunch") },
+        )
+        NotificationActionReceiver.handle(app, reply, id)
+        assertEquals(null, app.db.transactions().byId(id)!!.note)
+        assertEquals(1, notifications.size)
     }
 }
