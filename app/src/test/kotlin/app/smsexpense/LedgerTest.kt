@@ -127,4 +127,12 @@ class LedgerTest {
         assertEquals(null, ledger.record(Source.SMS, "AD-HDFCBK", "Hello. ".repeat(500) + sms, 1_000L))
         assertTrue(ledger.record(Source.SMS, "AD-HDFCBK", sms + " Thank you. ".repeat(500), 2_000L) != null)
     }
+
+    @Test fun twoDifferentLongTextsWithTheSameStartAreNotTakenForOne() = runTest {
+        val sms = "Sent Rs.320.00NLFrom HDFC Bank A/C *1234NLTo CALIFORNIA BURRITONLOn 08/10/26NLRef 412398765012".replace("NL", 10.toChar().toString())
+        val start = sms + " Thank you. ".repeat(200)
+        val first = ledger.record(Source.SMS, "AD-HDFCBK", start + "one", 1_000L)
+        val second = ledger.record(Source.SMS, "AD-HDFCBK", start + "two", 1_000L)
+        assertTrue(first != null && second != null && first != second)
+    }
 }

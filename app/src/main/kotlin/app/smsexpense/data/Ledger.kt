@@ -33,10 +33,11 @@ class Ledger(
      * @return the new transaction's id, or null when the message was ignored or already saved.
      */
     suspend fun record(source: Source, sender: String, fullBody: String, receivedAt: Long, fromInbox: Boolean = false): Long? {
-        // Bank alerts are a few hundred characters. A far longer text is cut before anything reads it, so one cannot keep the parser busy (#235).
+        if (fromInbox && caughtLiveAtAnotherTime(sender, fullBody, receivedAt)) return null
+        val print = fingerprint(source, sender, fullBody, receivedAt)
+        // Bank alerts are a few hundred characters. Only the start of a far longer text is read, so one cannot keep the parser busy (#235).
+        // The fingerprint still covers the whole text, so two different messages never look like one.
         val body = fullBody.take(MESSAGE_MAX)
-        if (fromInbox && caughtLiveAtAnotherTime(sender, body, receivedAt)) return null
-        val print = fingerprint(source, sender, body, receivedAt)
         val reading = when (val r = SmsParser.parse(source, sender, body)) {
             is SmsReading.Transaction -> r
             // The rules could not read the amount; the on-device model gets one try, and its answer is checked.
