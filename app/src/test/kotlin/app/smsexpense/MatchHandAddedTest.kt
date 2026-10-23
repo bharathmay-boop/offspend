@@ -162,4 +162,16 @@ class MatchHandAddedTest {
         assertEquals(listOf("NEWSHOP"), visible().map { it.merchant })
         assertEquals(visible().single().id, filed)
     }
+
+    // #234: "No, add it" is allowed on a deleted row only because the bank copy is hidden behind a hand-added entry on purpose.
+    // Once it has been answered and the person deletes that payment, an old button must not bring it back.
+    @Test fun aLeftoverNoAddItCannotRestoreAPaymentThePersonDeleted() = runTest {
+        val manual = addByHand(t0)
+        val bank = app.onMessage(Source.SMS, "AD-HDFCBK", sms, t0 + 60_000)!!
+        NotificationActionReceiver.handle(app, Intent(TransactionNotifier.ACTION_SEPARATE), bank)
+        assertEquals(2, visible().size)
+        app.ledger.delete(bank)
+        NotificationActionReceiver.handle(app, Intent(TransactionNotifier.ACTION_SEPARATE), bank)
+        assertEquals(listOf(manual), visible().map { it.id })
+    }
 }
