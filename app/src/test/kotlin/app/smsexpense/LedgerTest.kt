@@ -120,4 +120,11 @@ class LedgerTest {
         val id = ledger.record(Source.SMS, "AD-HDFCBK", sms.replace("CALIFORNIA BURRITO", "CALIFORNIA \u202EBURRITO"), 2_000L)!!
         assertEquals("CALIFORNIA BURRITO", db.transactions().byId(id)!!.merchant)
     }
+
+    // #235: bank alerts are a few hundred characters; reading a far longer text would only cost time.
+    @Test fun aTextLongerThanAnyBankAlertIsNotReadPastItsLimit() = runTest {
+        val sms = "Sent Rs.320.00\nFrom HDFC Bank A/C *1234\nTo CALIFORNIA BURRITO\nOn 08/10/26\nRef 412398765012"
+        assertEquals(null, ledger.record(Source.SMS, "AD-HDFCBK", "Hello. ".repeat(500) + sms, 1_000L))
+        assertTrue(ledger.record(Source.SMS, "AD-HDFCBK", sms + " Thank you. ".repeat(500), 2_000L) != null)
+    }
 }
