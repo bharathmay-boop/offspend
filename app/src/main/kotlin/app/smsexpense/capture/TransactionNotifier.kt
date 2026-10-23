@@ -28,6 +28,8 @@ object TransactionNotifier {
     const val ACTION_SEPARATE = "app.smsexpense.SEPARATE"
     const val EXTRA_TX = "transaction_id"
     const val EXTRA_CATEGORY = "category_id"
+    /** The payee the notification showed ("" when it showed none), so a late rename is noticed (#233). */
+    const val EXTRA_SHOWN = "shown_merchant"
     const val KEY_NOTE = "note"
     const val GROUP = "payments"
     private const val SUMMARY_ID = Int.MAX_VALUE
@@ -85,7 +87,7 @@ object TransactionNotifier {
             .hiddenWhenLocked(context)
 
         if (category != null) {
-            builder.addAction(unlocked(confirmLabel(category.name, filedBefore), broadcast(context, ACTION_CONFIRM, tx.id) { putExtra(EXTRA_CATEGORY, category.id) }))
+            builder.addAction(unlocked(confirmLabel(category.name, filedBefore), broadcast(context, ACTION_CONFIRM, tx.id) { putExtra(EXTRA_CATEGORY, category.id).putExtra(EXTRA_SHOWN, tx.merchant.orEmpty()) }))
         }
         val noteInput = RemoteInput.Builder(KEY_NOTE).setLabel("Add a note").build()
         builder.addAction(

@@ -170,10 +170,13 @@ class Ledger(
      * Files a transaction under a category. A payee seen for the first time is remembered under it. A payee the app
      * already knows keeps what it was taught, so a one-off doesn't change every payment after it, unless [alwaysUse] (#168).
      */
-    suspend fun setCategory(transactionId: Long, categoryId: Long, alwaysUse: Boolean = false) {
+    suspend fun setCategory(transactionId: Long, categoryId: Long, alwaysUse: Boolean = false, shownMerchant: String? = null) {
         val tx = db.transactions().byId(transactionId) ?: return
         db.transactions().setCategory(transactionId, categoryId)
         val key = tx.merchant?.let(Categorizer::merchantKey) ?: return
+        // A button on a notification approved a category for the payee it showed. If another source renamed the payee since,
+        // the person never saw this name, so nothing is learned for it (#233).
+        if (shownMerchant != null && Categorizer.merchantKey(shownMerchant) != key) return
         if (alwaysUse || db.merchantRules().byKey(key) == null) db.merchantRules().upsert(MerchantRuleEntity(key, categoryId))
     }
 

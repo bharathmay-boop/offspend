@@ -34,7 +34,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
             when (intent.action) {
                 TransactionNotifier.ACTION_CONFIRM -> {
                     val categoryId = intent.getLongExtra(TransactionNotifier.EXTRA_CATEGORY, -1)
-                    if (categoryId >= 0) app.ledger.setCategory(txId, categoryId)
+                    if (categoryId >= 0) app.ledger.setCategory(txId, categoryId, shownMerchant = intent.getStringExtra(TransactionNotifier.EXTRA_SHOWN))
                     TransactionNotifier.dismiss(app, txId)
                 }
                 TransactionNotifier.ACTION_SAME -> TransactionNotifier.dismiss(app, txId)
