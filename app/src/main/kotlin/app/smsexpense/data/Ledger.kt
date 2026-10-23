@@ -32,9 +32,12 @@ class Ledger(
      * [fromInbox] is true for messages read back from the SMS inbox (first import and catch-up) rather than caught live.
      * @return the new transaction's id, or null when the message was ignored or already saved.
      */
-    suspend fun record(source: Source, sender: String, body: String, receivedAt: Long, fromInbox: Boolean = false): Long? {
-        if (fromInbox && caughtLiveAtAnotherTime(sender, body, receivedAt)) return null
-        val print = fingerprint(source, sender, body, receivedAt)
+    suspend fun record(source: Source, sender: String, fullBody: String, receivedAt: Long, fromInbox: Boolean = false): Long? {
+        if (fromInbox && caughtLiveAtAnotherTime(sender, fullBody, receivedAt)) return null
+        val print = fingerprint(source, sender, fullBody, receivedAt)
+        // Bank alerts are a few hundred characters. Only the start of a far longer text is read, so one cannot keep the parser busy (#235).
+        // The fingerprint still covers the whole text, so two different messages never look like one.
+        val body = fullBody.take(MESSAGE_MAX).dropLastWhile { it.isHighSurrogate() }
         val reading = when (val r = SmsParser.parse(source, sender, body)) {
             is SmsReading.Transaction -> r
             // The rules could not read the amount; the on-device model gets one try, and its answer is checked.
@@ -292,6 +295,7 @@ class Ledger(
         const val MANUAL = "MANUAL"
         /** The longest note kept, in characters. */
         const val NOTE_MAX = 200
+        const val MESSAGE_MAX = 1_500
         private const val TWIN_WINDOW_MS = 10 * 60 * 1000L
 
         /** How far apart the inbox's time and the live receiver's time can be for one message. */
