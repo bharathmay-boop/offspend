@@ -71,7 +71,7 @@ object ProblemReport {
         } catch (e: Exception) {
             buildString {
                 appendLine("Expense Tracker problem report")
-                appendLine("App: ${version(app)}")
+                appendLine("App: ${runCatching { version(app) }.getOrDefault("unknown")}")
                 append("The report could not be built (${e.javaClass.simpleName}). Please say so when you send this.")
             }
         }
