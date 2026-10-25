@@ -87,7 +87,7 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    /** "0.1.1 (2)": the version name people see, and the build number Play counts. */
+    /** "0.1.2 (3)": the version name people see, and the build number Play counts. */
     private fun versionLabel(): String = ProblemReport.version(this)
 
     companion object {
