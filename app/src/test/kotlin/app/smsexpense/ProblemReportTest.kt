@@ -67,6 +67,14 @@ class ProblemReportTest {
         assertTrue(report, report.contains("Receive SMS: allowed"))
     }
 
+    // Review: if the report cannot be built, the screen must still end with something to share.
+    @Test fun aReportThatCannotBeBuiltSaysSoInsteadOfWaitingForever() = runTest {
+        val text = ProblemReport.buildOrExplain(app) { throw IllegalStateException("secret detail") }
+        assertTrue(text, text.contains("could not be built (IllegalStateException)"))
+        assertTrue(text, text.contains(ProblemReport.version(app)))
+        assertFalse(text, text.contains("secret detail"))
+    }
+
     @Test fun theShareRequestCarriesTheReportAndOnlyAddsAnAddressWhenThereIsOne() {
         val plain = ProblemReport.shareIntent("the report", "0.1.1 (2)", email = "")
         assertEquals(Intent.ACTION_SEND, plain.action)

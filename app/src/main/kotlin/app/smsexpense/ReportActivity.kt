@@ -25,7 +25,7 @@ class ReportActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val app = application as ExpenseApp
-        lifecycleScope.launch { report = ProblemReport.build(app) }
+        lifecycleScope.launch { report = ProblemReport.buildOrExplain(app) }
         setContent {
             ExpenseTheme {
                 Surface(Modifier.fillMaxSize()) {

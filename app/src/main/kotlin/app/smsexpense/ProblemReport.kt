@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.pm.PackageInfoCompat
 import app.smsexpense.capture.PaymentNotificationListener
 import app.smsexpense.data.Ledger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.YearMonth
@@ -57,6 +58,23 @@ object ProblemReport {
             - Added by hand, all time: ${live.count { it.source == Ledger.MANUAL }}
         """.trimIndent()
     }
+
+    /**
+     * The report, or when it cannot be built (a broken database, say) a short note saying so, so the screen never waits
+     * forever and the person can still share something that names the build.
+     */
+    suspend fun buildOrExplain(app: ExpenseApp, make: suspend () -> String = { build(app) }): String =
+        try {
+            make()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            buildString {
+                appendLine("Expense Tracker problem report")
+                appendLine("App: ${version(app)}")
+                append("The report could not be built (${e.javaClass.simpleName}). Please say so when you send this.")
+            }
+        }
 
     /** "0.1.1 (2)": the version name people see and the build number Play counts. */
     fun version(context: Context): String {
