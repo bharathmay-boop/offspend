@@ -52,6 +52,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".ReportActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".DocumentActivity"
             android:exported="false" />
 

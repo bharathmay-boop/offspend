@@ -51,7 +51,7 @@ The most useful reports are:
 - **Anything confusing.** If you had to stop and think, that's worth telling us.
 - **A crash.** What you were doing just before.
 
-For now, send these to Bharath directly with your phone model. A "Report a problem" option inside the app is coming (issue #106), and it will attach the app's version and settings for you without any of your messages.
+Send these to Bharath with the report from the app: open Settings, tap **Report a problem**, read what it says, and tap **Share report**. It lists the app version, your phone and Android version, whether the SMS and notification permissions are on, whether battery saver limits the app, and a few counts. It has no messages, amounts, payees or notes. Pick WhatsApp or email in the share sheet, then add a line about what happened.
 
 ## For Bharath: test build versions
 

@@ -14,7 +14,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.core.content.pm.PackageInfoCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.smsexpense.capture.PaymentNotificationListener
 import app.smsexpense.ui.SettingsRow
@@ -57,7 +56,14 @@ class SettingsActivity : ComponentActivity() {
                             SettingsSection("Privacy and data", emptyList()),
                             SettingsSection("Look", listOf(SettingsRow(R.drawable.ic_palette, "Theme", theme.label) { choosingTheme = true })),
                             SettingsSection("Plus", emptyList()),
-                            // "Send feedback" joins these once the contact email is chosen (#100, #104).
+                            SettingsSection(
+                                "Support",
+                                listOf(
+                                    SettingsRow(R.drawable.ic_edit_note, "Report a problem", null) {
+                                        startActivity(ReportActivity.intent(this@SettingsActivity))
+                                    },
+                                ),
+                            ),
                             SettingsSection(
                                 "About",
                                 listOf(
@@ -82,10 +88,7 @@ class SettingsActivity : ComponentActivity() {
     }
 
     /** "0.1.1 (2)": the version name people see, and the build number Play counts. */
-    private fun versionLabel(): String {
-        val info = packageManager.getPackageInfo(packageName, 0)
-        return "${info.versionName} (${PackageInfoCompat.getLongVersionCode(info)})"
-    }
+    private fun versionLabel(): String = ProblemReport.version(this)
 
     companion object {
         fun intent(context: Context) = Intent(context, SettingsActivity::class.java)
