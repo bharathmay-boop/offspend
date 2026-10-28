@@ -76,7 +76,7 @@ object ProblemReport {
             }
         }
 
-    /** "0.1.2 (3)": the version name people see and the build number Play counts. */
+    /** "0.1.3 (4)": the version name people see and the build number Play counts. */
     fun version(context: Context): String {
         val info = context.packageManager.getPackageInfo(context.packageName, 0)
         return "${info.versionName} (${PackageInfoCompat.getLongVersionCode(info)})"
