@@ -14,8 +14,8 @@ android {
         applicationId = "app.smsexpense"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.1.2"
+        versionCode = 4
+        versionName = "0.1.3"
     }
 
     // The upload key and its passwords live outside the repo. Point the Gradle property
