@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Expense Tracker</string>
+    <string name="app_name">Offspend</string>
     <string name="shortcut_add">Add payment</string>
 </resources>

@@ -1,8 +1,8 @@
 # Privacy policy
 
-Last updated: 12 October 2026
+Last updated: 28 October 2026
 
-This app helps you track what you spend by reading the transaction messages your bank already sends you. It is built so that your financial information stays on your phone.
+Offspend helps you track what you spend by reading the transaction messages your bank already sends you. It is built so that your financial information stays on your phone.
 
 ## What the app reads
 

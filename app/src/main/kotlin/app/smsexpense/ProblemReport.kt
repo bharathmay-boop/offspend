@@ -38,7 +38,7 @@ object ProblemReport {
         val live = app.db.transactions().observeAll().first().filter { !it.deleted }
         val thisMonth = live.filter { YearMonth.from(Instant.ofEpochMilli(it.occurredAt).atZone(zone)) == month }
         return """
-            Expense Tracker problem report
+            Offspend problem report
             Made ${now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm xxx"))}
 
             App: ${version(app)}
@@ -70,7 +70,7 @@ object ProblemReport {
             throw e
         } catch (e: Exception) {
             buildString {
-                appendLine("Expense Tracker problem report")
+                appendLine("Offspend problem report")
                 appendLine("App: ${runCatching { version(app) }.getOrDefault("unknown")}")
                 append("The report could not be built (${e.javaClass.simpleName}). Please say so when you send this.")
             }

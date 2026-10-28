@@ -1,6 +1,6 @@
 # Testing the app with friends and family
 
-This guide is for people trying an early build of the expense tracker. Tracked in issue #103.
+This guide is for people trying an early build of Offspend. Tracked in issue #103.
 
 ## What the app does
 

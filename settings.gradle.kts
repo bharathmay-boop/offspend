@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "sms-expense-tracker"
+rootProject.name = "offspend"
 include(":core", ":app")
