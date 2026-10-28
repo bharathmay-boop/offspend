@@ -1,4 +1,4 @@
-# Design system
+# Offspend design system
 
 Every screen in this app follows this file. If a screen needs something that is not here, add it here first, then use it.
 

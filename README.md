@@ -1,6 +1,6 @@
-# SMS Expense Tracker (working name)
+# Offspend
 
-An Android app that reads bank and UPI transaction SMS on your phone and asks you to confirm the category with one tap. No typing, no bank login, and your spending data never leaves your phone.
+Offspend is an Android app that reads bank and UPI transaction SMS on your phone and asks you to confirm the category with one tap. No typing, no bank login, and your spending data never leaves your phone.
 
 ## How it works
 

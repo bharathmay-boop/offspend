@@ -7,7 +7,7 @@ The app reads SMS, which Google Play restricts, so there are two extra gates on 
 ## 1. Accounts and setup
 
 - [ ] Google Play Console developer account ($25 one time, identity verification).
-- [ ] App name and icon chosen (the name is still open; the repo uses a working name).
+- [x] App name chosen: **Offspend**. The launcher icon and the 512 x 512 store icon are still open (#206).
 - [ ] Privacy policy published at a public URL. The text is in [privacy-policy.md](privacy-policy.md); GitHub Pages on this repo is enough.
 - [x] Release build signed with an upload key kept outside the repo (never committed). See "Release build" below.
 
