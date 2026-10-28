@@ -51,4 +51,14 @@ class PrivacyTest {
             assertTrue("$path must be gitignored", ignored)
         }
     }
+
+    // #105: GitHub Pages publishes the privacy policy from docs/. The file has no front matter (the app ships the same file),
+    // so the plugin that renders it must stay on, and the project files next to it must stay off the site.
+    @Test fun onlyThePrivacyPolicyIsPublishedFromDocs() {
+        val config = File("../docs/_config.yml").readText()
+        assertTrue("the policy would not be rendered", config.contains("jekyll-optional-front-matter"))
+        for (internal in listOf("PLAY_RELEASE.md", "TESTING.md")) {
+            assertTrue("$internal would be published", config.contains("- $internal"))
+        }
+    }
 }
