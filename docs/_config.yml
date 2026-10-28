@@ -15,4 +15,3 @@ optional_front_matter:
 exclude:
   - PLAY_RELEASE.md
   - TESTING.md
-  - superpowers
