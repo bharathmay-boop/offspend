@@ -1,0 +1,17 @@
+# GitHub Pages (Jekyll) settings for the docs/ folder (#105).
+# Only the privacy policy is published from here. The other files in docs/ are for the project and stay off the site.
+title: Offspend
+description: Offspend reads your bank transaction texts on your phone and files each payment in one tap. Nothing leaves your phone.
+theme: jekyll-theme-minimal
+show_downloads: false
+
+# privacy-policy.md has no front matter on purpose: the same file ships inside the app. This plugin renders it anyway.
+plugins:
+  - jekyll-optional-front-matter
+optional_front_matter:
+  enabled: true
+  remove_originals: true
+
+exclude:
+  - PLAY_RELEASE.md
+  - TESTING.md
