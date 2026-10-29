@@ -218,8 +218,8 @@ Question is an `<h3>` containing a button with `aria-expanded` and `aria-control
 - Android only, said early. The iPhone answer is in the FAQ (iOS does not let apps read SMS).
 - Pricing: "Free to try during the test. Public pricing is not set yet." Nothing invented.
 - Delete your data: uninstall, or clear storage in Android settings (from the policy).
-- The "no internet permission" proof links to the manifest in the public repo, not the repo home. Not claimed from a Play page that does not exist yet.
-- Website privacy is separate from app privacy: the site sets no cookies and loads no third-party scripts, fonts or embeds; GitHub Pages is the host and GitHub's own logs are theirs.
+- The "no internet permission" proof links to the manifest only while `REPO_URL` in `site/lib/config.ts` is set (the repo is public today; the owner plans to make it private, which empties it and hides the link and the footer repo link). Not claimed from a Play page that does not exist yet.
+- Website privacy is separate from app privacy: the site sets no cookies and loads no third-party scripts, fonts or embeds; Cloudflare Pages is the host and Cloudflare's own logs are theirs.
 
 ## 6. Depth & Elevation
 
@@ -328,6 +328,14 @@ Left or changed: the audit would drop the QR block entirely until the URL exists
 
 **Metadata:** title "Offspend: expense tracking from bank SMS for Android"; description "Turn bank and UPI transaction SMS into expenses on your phone. Confirm categories with one tap. No account, no server, no internet permission."; Open Graph and Twitter cards with a static 1200 by 630 image; canonical, sitemap and robots built from the real origin and base path; `SoftwareApplication` structured data with only known facts (no price, rating or download URL); no placeholder URL is ever written into metadata.
 
-**Release checks (all must pass before deploy):** the page builds; both release states render and the QR target equals `PLAY_URL`; no horizontal overflow at 320 and 360px; keyboard-only run through the page; reduced motion shows no animation; the page is fully readable with JavaScript off; `/privacy-policy`, deep links and assets resolve under the Pages base path; no request leaves the origin; heading order and landmarks are valid; contrast holds in both themes.
+**Release checks (all must pass before deploy):** the page builds; both release states render and the QR target equals `PLAY_URL`; no horizontal overflow at 320 and 360px; keyboard-only run through the page; reduced motion shows no animation; the page is fully readable with JavaScript off; `/privacy-policy`, deep links and assets resolve at the domain root (no base path); no request leaves the origin; heading order and landmarks are valid; contrast holds in both themes.
 
 *Credits: none required. No third-party motion library code is used.*
+
+
+## Hosting (decided 2026-10-29)
+
+- Host: Cloudflare Pages (free), custom domain offspend.com, static export from `site/` (build `npm run build`, output `site/out`). No base path.
+- The privacy policy is served at `https://offspend.com/privacy-policy`, so it keeps working if the repo is made private (GitHub Pages stops on a private free-plan repo). The old GitHub Pages copy is retired once the domain is live. Paste the offspend.com address into the Play form, not the github.io one.
+- Repo renamed to `bharathmay-boop/offspend` on 2026-10-29. Visibility is unchanged (public) until the owner decides.
+- The site is a landing page for the Android app on Google Play (Android only), not an App Store page.
