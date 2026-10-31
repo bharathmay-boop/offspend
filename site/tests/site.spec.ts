@@ -78,3 +78,26 @@ test("every page has one h1, a main landmark and a skip link", async ({ page }) 
     await expect(page.getByRole("link", { name: "Skip to content" })).toHaveCount(1);
   }
 });
+
+test.describe("mobile menu", () => {
+  test.use({ viewport: { width: 360, height: 780 } });
+  test("opens, traps focus inside, and returns focus to the button on Escape", async ({ page }) => {
+    await page.goto("/");
+    const trigger = page.getByRole("button", { name: "Open menu" });
+    await trigger.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    for (let i = 0; i < 3; i++) await page.keyboard.press("Tab");
+    expect(await page.evaluate(() => !!document.activeElement?.closest("[role=dialog]"))).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+});
+
+test("the live region around the demo is always in the page", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#top [aria-live=polite]")).toHaveCount(1);
+  await page.getByRole("button", { name: "Yes, Food" }).click();
+  await expect(page.locator("#top [aria-live=polite]")).toHaveCount(1);
+});

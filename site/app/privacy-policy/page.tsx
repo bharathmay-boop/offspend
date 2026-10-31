@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { marked } from "marked";
 import type { Metadata } from "next";
 import { Footer } from "@/components/sections";
 import { Nav } from "@/components/nav";
+import { renderPolicy } from "@/lib/policy";
 
 export const metadata: Metadata = {
   title: "Privacy policy | Offspend",
@@ -13,8 +13,7 @@ export const metadata: Metadata = {
 
 // One source of truth: the same file the app repo keeps in docs/. Read at build time.
 const source = readFileSync(path.join(process.cwd(), "..", "docs", "privacy-policy.md"), "utf8");
-// Raw HTML in the markdown is escaped, not rendered.
-const html = marked.parse(source, { async: false, renderer: Object.assign(new marked.Renderer(), { html: ({ text }: { text: string }) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;") }) }) as string;
+const html = renderPolicy(source);
 
 export default function PrivacyPolicy() {
   return (

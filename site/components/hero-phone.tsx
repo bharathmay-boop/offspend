@@ -10,11 +10,11 @@ export function HeroPhone() {
     <div className="enter enter-2">
       <PhoneFrame>
         <div className="flex h-full flex-col gap-4 p-4 pt-10">
-          <div className="rounded-2xl border border-border bg-surface p-3 text-[0.8125rem] leading-snug shadow-sm">
+          <div aria-live="polite" className="rounded-2xl border border-border bg-surface p-3 text-[0.8125rem] leading-snug shadow-sm">
             <p className="mb-1 text-text-3">Offspend · now</p>
             {filed ? (
               <>
-                <p className="m-0 font-semibold text-text" aria-live="polite"><span aria-hidden="true">✓ </span>Filed under Food</p>
+                <p className="m-0 font-semibold text-text"><span aria-hidden="true">✓ </span>Filed under Food</p>
                 <button type="button" onClick={() => setFiled(false)} className="mt-2 min-h-11 rounded-full px-3 font-semibold text-brand underline underline-offset-4">
                   Tap again to undo
                 </button>
