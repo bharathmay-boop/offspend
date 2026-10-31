@@ -1,0 +1,96 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@font-face { font-family: "Bricolage Grotesque"; src: url("/fonts/bricolage-latin.woff2") format("woff2"); font-weight: 600 800; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("/fonts/inter-latin.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
+
+/* Design tokens: site/DESIGN.md section 2, taken from the Android app's theme. Components use these names only. */
+:root {
+  --bg: #F6FAF7; --surface: #FFFFFF; --surface-alt: #EAEFEB; --surface-hover: #E4EAE6; --surface-inverse: #2C322F;
+  --border: #BFC9C4; --border-hover: #6F7975;
+  --text: #171D1A; --text-secondary: #3F4945; --text-tertiary: #5A6460; --text-on-inverse: #EDF2EE;
+  --accent: #0D6B58; --accent-hover: #0A5546; --accent-container: #B8EFDC; --on-accent-container: #00201A;
+  --credit: #1B7F3B; --warm: #FFDF9E; --on-warm: #261A00;
+  --bg-rgb: 246, 250, 247; --accent-rgb: 13, 107, 88; --text-rgb: 23, 29, 26;
+  --error: #BA1A1A;
+  --font-display: "Bricolage Grotesque", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --nav-h: 64px;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0F1512; --surface: #171D1A; --surface-alt: #1B211E; --surface-hover: #252B28; --surface-inverse: #0A0F0D;
+    --border: #3F4945; --border-hover: #89938E;
+    --text: #DEE4E0; --text-secondary: #BFC9C4; --text-tertiary: #9AA5A0; --text-on-inverse: #DEE4E0;
+    --accent: #8CD5BD; --accent-hover: #A8F2D9; --accent-container: #005142; --on-accent-container: #A8F2D9;
+    --credit: #7BDA8F; --warm: #5C4300; --on-warm: #FFDF9E;
+    --bg-rgb: 15, 21, 18; --accent-rgb: 140, 213, 189; --text-rgb: 222, 228, 224;
+    --error: #FFB4AB;
+  }
+}
+
+/* shadcn token names mapped onto the design tokens */
+:root {
+  --background: var(--bg); --foreground: var(--text);
+  --card: var(--surface); --card-foreground: var(--text);
+  --popover: var(--surface); --popover-foreground: var(--text);
+  --primary: var(--accent); --primary-foreground: var(--bg);
+  --secondary: var(--surface-alt); --secondary-foreground: var(--text);
+  --muted: var(--surface-alt); --muted-foreground: var(--text-secondary);
+  --accent-foreground: var(--on-accent-container);
+  --destructive: var(--error); --input: var(--border); --ring: var(--accent);
+  --radius: 0.75rem;
+}
+
+@theme inline {
+  --color-background: var(--background); --color-foreground: var(--foreground);
+  --color-card: var(--card); --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive); --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
+  --color-bg: var(--bg); --color-surface: var(--surface); --color-surface-alt: var(--surface-alt); --color-surface-inverse: var(--surface-inverse);
+  --color-text: var(--text); --color-text-2: var(--text-secondary); --color-text-3: var(--text-tertiary); --color-on-inverse: var(--text-on-inverse);
+  --color-brand: var(--accent); --color-brand-hover: var(--accent-hover);
+  --color-mint: var(--accent-container); --color-on-mint: var(--on-accent-container);
+  --color-credit: var(--credit); --color-warm: var(--warm); --color-on-warm: var(--on-warm);
+  --font-sans: var(--font-body); --font-heading: var(--font-display); --font-display: var(--font-display);
+  --radius-sm: calc(var(--radius) * 0.6); --radius-md: calc(var(--radius) * 0.8); --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4); --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; scroll-padding-top: calc(var(--nav-h) + 8px); }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 1.0625rem; line-height: 1.65; -webkit-font-smoothing: antialiased; overflow-x: clip; }
+  h1, h2, h3 { font-family: var(--font-display); color: var(--text); }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+  .on-inverse :focus-visible { outline-color: var(--text-on-inverse); }
+}
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Hero entrance: text is visible immediately, only the phone rises. */
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.enter { animation: rise .6s cubic-bezier(.22,.8,.3,1) both; }
+.enter-2 { animation-delay: .25s; }
+
+/* Story: the pinned phone only exists on large, tall, hover-capable screens that allow motion, and only with JS. Everywhere else each step carries its own phone. */
+.story-sticky { display: none; }
+@media (min-width: 1024px) and (min-height: 700px) and (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .js .story-sticky { display: block; }
+  .js .story-inline { display: none; }
+}
+.story-screen { opacity: 0; transition: opacity .35s ease; position: absolute; inset: 0; }
+.story-screen[data-active="true"] { opacity: 1; }
+
+/* No JavaScript: the accordion is replaced by the plain list inside <noscript>. */
+:root:not(.js) .faq-acc { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

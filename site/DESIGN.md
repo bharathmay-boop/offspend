@@ -2,7 +2,7 @@
 
 > Calm enough to trust with your bank texts, alive enough to show exactly what happens to one.
 
-Status: **draft for the owner's confirmation.** No site code exists yet. The plan behind this file was audited by GPT-6 Astra (`openai/gpt-6-astra`, #2 on Arena WebDev, Oct 2026); what was taken and what was left is in section 10.
+Status: **confirmed by the owner 2026-10-30; built under #209.** The plan behind this file was audited by GPT-6 Astra (`openai/gpt-6-astra`, #2 on Arena WebDev, Oct 2026); what was taken and what was left is in section 10.
 
 ## 1. Visual Theme & Atmosphere
 
@@ -12,7 +12,7 @@ Status: **draft for the owner's confirmation.** No site code exists yet. The pla
 **Feel**: A tidy ledger book that quietly fills itself in.
 
 **Interaction Tier**: L3 (immersive), chosen by the owner. Applied with restraint: one pinned scroll story and one tap-to-file demo in the hero carry the whole tier. The skill's effect quotas are a ceiling, not a target, and nothing is added to meet a count. Reason: this is a money app asking for SMS access, so trust and speed on cheap phones beat spectacle.
-**Dependencies**: GSAP + ScrollTrigger, loaded only on viewports that pin the story (see section 7). No Lenis, no WebGL, no custom cursor.
+**Dependencies**: none for motion. The pinned story uses CSS `position: sticky` plus one IntersectionObserver (see section 7). No GSAP, no Lenis, no WebGL, no custom cursor.
 
 ## 2. Color Palette & Roles
 
@@ -339,3 +339,12 @@ Left or changed: the audit would drop the QR block entirely until the URL exists
 - The privacy policy is served at `https://offspend.com/privacy-policy`, so it keeps working if the repo is made private (GitHub Pages stops on a private free-plan repo). The old GitHub Pages copy is retired once the domain is live. Paste the offspend.com address into the Play form, not the github.io one.
 - Repo renamed to `bharathmay-boop/offspend` on 2026-10-29. Visibility is unchanged (public) until the owner decides.
 - The site is a landing page for the Android app on Google Play (Android only), not an App Store page.
+
+## Build notes (2026-10-31)
+
+- **Pin without GSAP.** The pinned story shipped as a CSS sticky phone whose screen swaps as each step scrolls past (IntersectionObserver). Same behaviour as the planned ScrollTrigger pin, no library, nothing to download. CSS shows the sticky phone only at 1024px+ wide, 700px+ tall, with hover and no reduced-motion, and only when JavaScript ran; everywhere else every step carries its own phone.
+- **Story screens are drawn, not screenshots.** The phone screens are built in HTML with invented sample data labelled "Example transaction", because the existing emulator screenshots still show the old app name. Swap in real Offspend screenshots when they are captured.
+- **FAQ with JavaScript off** is a plain list inside `<noscript>`; the accordion is hidden when the page has no JS.
+- **shadcn.** Components come from the shadcn CLI (button, accordion, sheet). The CLI wired the helper to an unrelated npm package named `cn`; it was replaced with `clsx` + `tailwind-merge` in `lib/utils.ts`.
+- **Policy page** is built from `docs/privacy-policy.md`; raw HTML in the markdown is escaped.
+- **Headers** are in `public/_headers` (Cloudflare Pages): frame-ancestors none, nosniff, HSTS, a strict CSP with no third-party sources.
