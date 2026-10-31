@@ -24,8 +24,9 @@ test("tapping Yes, Food files the example payment and can be undone", async ({ p
   await page.goto("/");
   await page.getByRole("button", { name: "Yes, Food" }).click();
   await expect(page.locator("#top").getByText("Filed under Food")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tap again to undo" })).toBeFocused();
   await page.getByRole("button", { name: "Tap again to undo" }).click();
-  await expect(page.getByRole("button", { name: "Yes, Food" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Yes, Food" })).toBeFocused();
 });
 
 test.describe("JavaScript off", () => {
